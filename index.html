@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HaseDB</title>
+
+  <!-- Als App auf dem iPhone-Homescreen -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="HaseDB">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#F2F0E9">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ================= LOGIN ================= -->
+  <main id="login" class="login" hidden>
+    <div class="logo logo-gross"><span class="logo-hase">HASE</span><span class="logo-db">DB</span></div>
+    <p class="etikett gelb">DATENBANK · SMOKE-COUNTER</p>
+    <form id="login-form" class="karte stapel">
+      <label class="feld"><span class="feld-titel">E-MAIL</span>
+        <input id="login-email" type="email" autocomplete="username" inputmode="email" required></label>
+      <label class="feld"><span class="feld-titel">PASSWORT</span>
+        <input id="login-passwort" type="password" autocomplete="current-password" required></label>
+      <p id="login-fehler" class="fehler" aria-live="polite"></p>
+      <button class="knopf primaer breit" type="submit">Anmelden</button>
+    </form>
+  </main>
+
+  <!-- ================= APP ================= -->
+  <div id="app" hidden>
+    <header class="kopf">
+      <div class="logo"><span class="logo-hase">HASE</span><span class="logo-db">DB</span></div>
+      <button id="neu-laden" class="knopf klein" type="button" aria-label="Neu laden">↻</button>
+    </header>
+
+    <!-- Smoke-Counter -->
+    <section id="seite-smoke" class="seite">
+      <h1 class="titel">Smoke-Counter</h1>
+
+      <div class="karte serie-karte">
+        <div class="serie-block">
+          <div id="serie-zahl" class="serie-zahl">0</div>
+          <div id="serie-text" class="serie-text">TAGE RAUCHFREI IN FOLGE</div>
+        </div>
+        <p id="heute-status" class="heute-status"></p>
+        <div class="knopf-reihe">
+          <button id="heute-rauchfrei" class="knopf primaer" type="button">Heute rauchfrei</button>
+          <button id="heute-plus" class="knopf" type="button">+1</button>
+          <button id="heute-minus" class="knopf" type="button">−1</button>
+        </div>
+        <p class="marke">LETZTE 14 TAGE</p>
+        <div id="verlauf" class="verlauf"></div>
+      </div>
+
+      <div class="kennzahlen">
+        <div class="karte kennzahl"><span class="marke">REKORD</span><strong id="kz-rekord">–</strong></div>
+        <div class="karte kennzahl"><span class="marke">DIESER MONAT</span><strong id="kz-monat">–</strong><small>rauchfrei / geraucht</small></div>
+      </div>
+
+      <div class="karte">
+        <div class="kalender-kopf">
+          <h2 id="kal-monat" class="ueberschrift"></h2>
+          <div class="knopf-reihe eng">
+            <button id="kal-zurueck" class="knopf klein" type="button" aria-label="Voriger Monat">←</button>
+            <button id="kal-vor" class="knopf klein" type="button" aria-label="Nächster Monat">→</button>
+          </div>
+        </div>
+        <div class="kal-wochentage"><span>MO</span><span>DI</span><span>MI</span><span>DO</span><span>FR</span><span>SA</span><span>SO</span></div>
+        <div id="kalender" class="kalender"></div>
+        <p class="leise klein-text">Tippe auf einen Tag, um ihn nachzutragen.</p>
+      </div>
+    </section>
+
+    <!-- Neuer Eintrag -->
+    <section id="seite-neu" class="seite" hidden>
+      <h1 class="titel">Neuer Eintrag</h1>
+      <form id="neu-form" class="karte stapel">
+        <label class="feld"><span class="feld-titel">NAME</span>
+          <input id="neu-name" type="text" placeholder="z. B. Lava Cake" required></label>
+        <div class="zwei-spalten">
+          <label class="feld"><span class="feld-titel">THC (%)</span>
+            <input id="neu-thc" type="text" inputmode="decimal" placeholder="24,5" required></label>
+          <div class="feld"><span class="feld-titel">BESTRAHLT</span>
+            <div class="segmente" role="radiogroup">
+              <button type="button" class="segment aktiv" data-wert="nein">NEIN</button>
+              <button type="button" class="segment" data-wert="ja">JA</button>
+            </div>
+          </div>
+        </div>
+        <label class="feld"><span class="feld-titel">TERPENE</span>
+          <input id="neu-terpene" type="text" placeholder="Myrcen, Limonen" required></label>
+        <label class="feld"><span class="feld-titel">REVIEW (OPTIONAL)</span>
+          <textarea id="neu-review" rows="4" placeholder="Wie war's?"></textarea></label>
+        <p id="neu-fehler" class="fehler" aria-live="polite"></p>
+        <button class="knopf primaer breit" type="submit">Hinzufügen</button>
+      </form>
+    </section>
+
+    <!-- Liste -->
+    <section id="seite-liste" class="seite" hidden>
+      <h1 class="titel">Einträge</h1>
+      <input id="suche" class="suche" type="search" placeholder="Nach Namen suchen …">
+      <p id="liste-zaehler" class="marke"></p>
+      <div id="liste" class="liste"></div>
+    </section>
+
+    <!-- Navigation unten -->
+    <nav class="tabs">
+      <button class="tab aktiv" data-seite="smoke" type="button"><span class="tab-nr">01</span>Smoke</button>
+      <button class="tab" data-seite="neu" type="button"><span class="tab-nr">02</span>+ Neu</button>
+      <button class="tab" data-seite="liste" type="button"><span class="tab-nr">03</span>Liste</button>
+    </nav>
+  </div>
+
+  <!-- ================= BLATT (von unten) ================= -->
+  <div id="blatt-hintergrund" class="blatt-hintergrund" hidden></div>
+  <div id="blatt" class="blatt" hidden role="dialog" aria-modal="true">
+    <div class="blatt-kopf">
+      <span id="blatt-titel" class="blatt-titel"></span>
+      <button id="blatt-zu" class="blatt-zu" type="button" aria-label="Schließen">✕</button>
+    </div>
+    <div id="blatt-inhalt" class="blatt-inhalt"></div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
