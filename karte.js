@@ -150,7 +150,7 @@ window.Karte = (function () {
   async function stilLaden() {
     try {
       const r = await fetch(CFG.kartenstil); if (!r.ok) throw new Error(r.status);
-      map.setStyle(umfaerben(await r.json()));
+      map.setStyle(umfaerben(await r.json()), { diff: false });   // ohne diff: sonst bleiben eigene Ebenen (Route, Gebiet) weg
     } catch (e) {
       meldung('Kartenstil konnte nicht geladen werden – Internet?', 5000);
     }
