@@ -378,11 +378,16 @@
     const v = L.vergleich(zwei.map((p) => ({ id: p, name: name(p), tage: Z.tage[p] || {} })), n, L.heute());
     const best = (arr, hoch) => { const z = hoch ? Math.max(...arr) : Math.min(...arr); return arr.map((x) => x === z && arr.filter((y) => y === z).length === 1); };
     const bS = best(v.serien, true), bR = best(v.rekorde, true), bF = best(v.rauchfrei, true), bG = best(v.summen, false);
+    const zeilen = [
+      ['Aktuelle Serie', v.serien, bS, (x) => x + (x === 1 ? ' Tag' : ' Tage')],
+      ['Rekord', v.rekorde, bR, (x) => x + (x === 1 ? ' Tag' : ' Tage')],
+      [`Rauchfrei (${n} T.)`, v.rauchfrei, bF, (x) => x],
+      [`Mal geraucht (${n} T.)`, v.summen, bG, (x) => x + '×'],
+      ['Eingetragen', v.eingetragen, [false, false], (x) => `${x} / ${n}`],
+    ];
     el.innerHTML = `<div class="box-kopf"><span>VERGLEICH</span><div class="segment" id="vgl-n">${[7, 30, 90].map((x) => `<button data-n="${x}" class="${x === n ? 'aktiv' : ''}">${x} TAGE</button>`).join('')}</div></div>
-      <table class="vgl-tabelle"><thead><tr><th></th><th>SERIE</th><th>REKORD</th><th>RAUCHFREI</th><th>MAL GERAUCHT</th><th>EINGETRAGEN</th></tr></thead><tbody>
-      ${zwei.map((p, i) => `<tr><td><span class="punkt${i ? ' weiss' : ''}"></span>${esc(name(p))}</td>
-        <td class="${bS[i] ? 'besser' : ''}">${v.serien[i]}</td><td class="${bR[i] ? 'besser' : ''}">${v.rekorde[i]}</td>
-        <td class="${bF[i] ? 'besser' : ''}">${v.rauchfrei[i]}</td><td class="${bG[i] ? 'besser' : ''}">${v.summen[i]}</td><td>${v.eingetragen[i]} / ${n}</td></tr>`).join('')}
+      <table class="vgl-tabelle"><thead><tr><th></th>${zwei.map((p, i) => `<th><span class="punkt${i ? ' weiss' : ''}"></span>${esc(name(p))}</th>`).join('')}</tr></thead><tbody>
+      ${zeilen.map(([t, w, b, f]) => `<tr><td>${t}</td>${w.map((x, i) => `<td class="${b[i] ? 'besser' : ''}">${f(x)}</td>`).join('')}</tr>`).join('')}
       </tbody></table>
       <div class="raster zwei breit-links" style="margin-top:0">
         <div><div class="box-kopf"><span>PRO TAG</span><span class="leise">${zwei.map((p, i) => `<span class="punkt${i ? ' weiss' : ''}"></span>${esc(name(p))}`).join(' &nbsp; ')}</span></div>

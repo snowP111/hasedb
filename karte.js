@@ -172,6 +172,13 @@ window.Karte = (function () {
   });
   const leer = () => ({ type: 'FeatureCollection', features: [] });
 
+  // Ort-Symbole beim Herauszoomen verkleinern (Zoom 16+ = volle Größe, ab 12 = 40 %)
+  function mkGroesse() {
+    const s = Math.max(0.4, Math.min(1, 0.4 + (map.getZoom() - 12) * 0.15));
+    $('#karte-map').style.setProperty('--mk', s.toFixed(2));
+  }
+  map.on('zoom', mkGroesse); mkGroesse();
+
   // Kompass
   const nadel = $('#kompass-nadel');
   map.on('rotate', () => { nadel.style.transform = `rotate(${-map.getBearing()}deg)`; });
@@ -228,7 +235,7 @@ window.Karte = (function () {
       m.setLngLat([o.lon, o.lat]);
       const gew = S.gewaehlt === o.id;
       el.className = 'mk' + (o.kategorie === 'wichtig' ? ' wichtig' : '') + (gew ? ' gewaehlt' : '') + (o.geteilt ? ' geteilt' : '');
-      el.innerHTML = `<div class="raute"></div>${ikon(o.kategorie)}` + (gew ? `<div class="mk-schild">${esc(o.name)}<small>${esc(katName(o.kategorie))}</small></div>` : '');
+      el.innerHTML = `<div class="mk-in"><div class="raute"></div>${ikon(o.kategorie)}</div>` + (gew ? `<div class="mk-schild">${esc(o.name)}<small>${esc(katName(o.kategorie))}</small></div>` : '');
       el.style.display = S.filter[o.kategorie] !== false ? '' : 'none';
       el.title = o.name;
     }
@@ -468,6 +475,7 @@ window.Karte = (function () {
       if (!r) throw new Error('Kein Weg gefunden – mit diesem Verkehrsmittel nicht erreichbar');
       S.letzteRoute = { r, a, b, na, nb, g };
       zeigeRoute(S.letzteRoute);
+      navStart(fmtKm(gesamtVorab(r, na, nb)).replace(/<[^>]+>/g, ' '), fmtMin(W.dauer(r, S.modus) + (na.meter + nb.meter) / (5 / 3.6)));
       const gesamtM = r.meter + na.meter + nb.meter;
       const sek = W.dauer(r, S.modus) + (na.meter + nb.meter) / (5 / 3.6);
       const e = $('#route-ergebnis'); e.hidden = false;
@@ -477,10 +485,12 @@ window.Karte = (function () {
       const e = $('#route-ergebnis'); e.hidden = false; e.innerHTML = `<div class="hinweis fehler" style="margin:0">${esc(err.message || 'Standort nicht verfügbar')}</div>`;
     } finally { knopf.disabled = false; knopf.textContent = 'ROUTE BERECHNEN'; }
   }
+  const gesamtVorab = (r, na, nb) => r.meter + na.meter + nb.meter;
   function zeigeRoute(R) {
     if (!map.getSource('route')) return;
     const { r, a, b, g } = R, d = g.d;
     const koord = r.pfad.map((i) => [d.lon[i], d.lat[i]]);
+    S.routeKoord = [[a.lon, a.lat], ...koord, [b.lon, b.lat]];
     const feats = [
       { type: 'Feature', geometry: { type: 'LineString', coordinates: koord } },
       { type: 'Feature', geometry: { type: 'LineString', coordinates: [[a.lon, a.lat], koord[0]] } },
@@ -496,6 +506,48 @@ window.Karte = (function () {
     const schmal = window.innerWidth <= 820;
     map.fitBounds(bb, { padding: schmal ? { top: 90, bottom: window.innerHeight * 0.5, left: 30, right: 30 } : { top: 110, bottom: 90, left: 360, right: 80 }, maxZoom: 17, duration: 900, pitch: map.getPitch(), bearing: map.getBearing() });
   }
+
+  // ------------------------------------------------------------------ Route verfolgen (eigener Standort nur während einer Route)
+  let navWatch = null, ichMarker = null, folgen = false;
+  function navStart(gesamt, dauer) {
+    $('#nav-text').textContent = `${gesamt.trim()} · ${dauer}`;
+    $('#nav-rest').textContent = 'ROUTE';
+    $('#nav-leiste').hidden = false;
+    if (window.innerWidth <= 820) $('#feld-links').classList.add('zu');
+    if (navWatch === null && navigator.geolocation) {
+      navWatch = navigator.geolocation.watchPosition(position, () => { $('#nav-rest').textContent = 'STANDORT AUS'; }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+    }
+  }
+  function position(p) {
+    const ll = [p.coords.longitude, p.coords.latitude];
+    if (!ichMarker) { const el = document.createElement('div'); el.className = 'ich-mk'; ichMarker = new maplibregl.Marker({ element: el }).setLngLat(ll).addTo(map); }
+    else ichMarker.setLngLat(ll);
+    if (folgen) map.easeTo({ center: ll, duration: 800 });
+    // Restweg: nächster Punkt auf der Route, ab dort bis zum Ziel
+    const k = S.routeKoord; if (!k || !k.length) return;
+    let bi = 0, bd = Infinity;
+    for (let i = 0; i < k.length; i++) { const dd = W.distanz(ll[1], ll[0], k[i][1], k[i][0]); if (dd < bd) { bd = dd; bi = i; } }
+    let rest = bd;
+    for (let i = bi; i + 1 < k.length; i++) rest += W.distanz(k[i][1], k[i][0], k[i + 1][1], k[i + 1][0]);
+    $('#nav-rest').textContent = rest < 25 ? 'ZIEL ERREICHT' : 'NOCH ' + fmtKm(rest).replace(/<[^>]+>/g, ' ').trim().toUpperCase();
+  }
+  function navEnde() {
+    if (navWatch !== null) { navigator.geolocation.clearWatch(navWatch); navWatch = null; }
+    if (ichMarker) { ichMarker.remove(); ichMarker = null; }
+    folgen = false; $('#nav-folgen').classList.remove('aktiv');
+    $('#nav-leiste').hidden = true; $('#route-ergebnis').hidden = true;
+    S.letzteRoute = null; S.routeKoord = null;
+    if (map.getSource('route')) map.getSource('route').setData(leer());
+    for (const w of ['start', 'ziel']) if (punktMarker[w]) { punktMarker[w].remove(); punktMarker[w] = null; }
+    S.punkte = { start: null, ziel: null };
+  }
+  $('#nav-ende').addEventListener('click', navEnde);
+  $('#nav-folgen').addEventListener('click', () => {
+    folgen = !folgen; $('#nav-folgen').classList.toggle('aktiv', folgen);
+    if (folgen && ichMarker) map.easeTo({ center: ichMarker.getLngLat(), zoom: Math.max(map.getZoom(), 16.5), duration: 800 });
+    if (folgen && !ichMarker) meldung('Warte auf deinen Standort …');
+  });
+  map.on('dragstart', () => { if (folgen) { folgen = false; $('#nav-folgen').classList.remove('aktiv'); } });
 
   // ------------------------------------------------------------------ Einstellungen: Ansicht
   $('#opt-3d').checked = lokal.get('3d', true);
