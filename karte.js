@@ -362,7 +362,7 @@ window.Karte = (function () {
   }
 
   // ------------------------------------------------------------------ Straßendaten & Wegfinder
-  const DATEN_KEY = 'strassen-v1-' + Object.values(CFG.gebiet).join('_');
+  const DATEN_KEY = 'strassen-v2-' + Object.values(CFG.gebiet).join('_');
   let ladeLaeuft = null;
   function datenInfo(t, fehler) {
     for (const id of ['#route-daten', '#daten-info']) { const el = $(id); el.textContent = t; el.classList.toggle('fehler', !!fehler); }
@@ -378,8 +378,8 @@ window.Karte = (function () {
       const g = CFG.gebiet;
       const q = `[out:json][timeout:180];way["highway"]["area"!="yes"](${g.s},${g.w},${g.n},${g.o});(._;>;);out body qt;`;
       let letzterFehler = null;
-      // 1) fertige Datei im Projekt (daten/overpass.json), 2) Overpass-Server nacheinander
-      const quellen = [{ url: 'daten/overpass.json' }, ...CFG.overpass.map((url) => ({ url, post: true }))];
+      // 1) fertige Datei im Repo (daten/strassen.json, schon kompakt), 2) Notfall: Overpass-Server nacheinander
+      const quellen = [{ url: 'daten/strassen.json?v=1' }, ...CFG.overpass.map((url) => ({ url, post: true }))];
       for (const qu of quellen) {
         try {
           if (qu.post) datenInfo('Lade Straßendaten von OpenStreetMap … (einmalig, bis zu 1–2 Minuten)');
@@ -388,8 +388,7 @@ window.Karte = (function () {
           clearTimeout(t);
           if (!r.ok) throw new Error(qu.post ? 'Server ausgelastet (' + r.status + ')' : 'keine Datei');
           const json = await r.json();
-          datenInfo('Baue Graph …');
-          const daten = W.kompakt(json);
+          const daten = json.version === 1 && Array.isArray(json.lat) ? json : W.kompakt(json);
           const eintrag = { zeit: Date.now(), daten };
           await idb.set(DATEN_KEY, eintrag);
           S.daten = daten; S.graphen = {};

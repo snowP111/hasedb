@@ -1,6 +1,6 @@
 // HaseDB – Service Worker: App-Dateien offline verfügbar (Netz zuerst, sonst Cache)
-const CACHE = 'hasedb-v6';
-const DATEIEN = ['./', 'index.html', 'style.css?v=6', 'app.js?v=6', 'logik.js?v=6', 'karte.js?v=6', 'graph.js?v=6', 'config.js?v=6', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+const CACHE = 'hasedb-v7';
+const DATEIEN = ['./', 'index.html', 'style.css?v=7', 'app.js?v=7', 'logik.js?v=7', 'karte.js?v=7', 'graph.js?v=7', 'config.js?v=7', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(DATEIEN)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((k) => Promise.all(k.filter((x) => x !== CACHE).map((x) => caches.delete(x)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
