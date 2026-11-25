@@ -1,4 +1,4 @@
-/* HaseDB – Reiter KARTE (ehemals mapApp): 3D-Karte München, Orte (privat/geteilt), A*-Wegfinder, MVG-Abfahrten.
+/* HaseDB – Reiter KARTE (ehemals mapApp): 3D-Karte München, Orte (privat/geteilt), A*-Wegfinder.
  * Wird erst beim ersten Öffnen des Reiters gestartet: Karte.start({ sb, user, name(uid), meldung }) */
 window.Karte = (function () {
   'use strict';
@@ -165,11 +165,6 @@ window.Karte = (function () {
     map.addSource('gebiet', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]], ring] } } });
     map.addLayer({ id: 'gebiet-maske', type: 'fill', source: 'gebiet', paint: { 'fill-color': '#000', 'fill-opacity': 0.45 } });
     map.addLayer({ id: 'gebiet-rand', type: 'line', source: 'gebiet', paint: { 'line-color': ROT, 'line-width': 1.2, 'line-opacity': 0.55, 'line-dasharray': [4, 3] } });
-    map.addSource('hst', { type: 'geojson', data: hstDaten() });
-    map.addLayer({ id: 'hst', type: 'circle', source: 'hst', minzoom: 13.5, layout: { visibility: hstAn() ? 'visible' : 'none' },
-      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 3, 17, 6], 'circle-color': '#050506', 'circle-stroke-color': ['match', ['get', 'bahn'], 1, ROT, '#ebe9e4'], 'circle-stroke-width': 1.8 } });
-    map.addLayer({ id: 'hst-name', type: 'symbol', source: 'hst', minzoom: 16, layout: { visibility: hstAn() ? 'visible' : 'none', 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 11, 'text-offset': [0, 1.2], 'text-anchor': 'top' },
-      paint: { 'text-color': '#c9c7c1', 'text-halo-color': '#050506', 'text-halo-width': 1.4 } });
     map.addSource('route', { type: 'geojson', data: leer() });
     map.addLayer({ id: 'route-glow', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ROT, 'line-width': 16, 'line-blur': 10, 'line-opacity': 0.55 } });
     map.addLayer({ id: 'route-kern', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ff5a6a', 'line-width': 4 } });
@@ -213,12 +208,7 @@ window.Karte = (function () {
       if (!KAT.some((x) => S.filter[x.id])) KAT.forEach((x) => { S.filter[x.id] = true; });
     }
     lokal.set('filter', S.filter);
-    zeichneFilter(); zeichneMarker(); hstSichtbar();
-    const nurOepnv = KAT.every((x) => S.filter[x.id] === (x.id === 'oepnv'));
-    if (nurOepnv) {
-      if (map.getZoom() < 14.5) map.easeTo({ zoom: 15, duration: 700 });
-      meldung('Haltestelle antippen für Live-Abfahrten');
-    }
+    zeichneFilter(); zeichneMarker();
   });
 
   // ------------------------------------------------------------------ Markierungen
@@ -253,15 +243,13 @@ window.Karte = (function () {
     $('#ort-art').innerHTML = ikon(o.kategorie) + `<span>${esc(katName(o.kategorie))}</span>`;
     $('#ort-notiz').textContent = o.notiz || '';
     $('#ort-wer').textContent = eigen(o) ? (o.geteilt ? 'GETEILT' : 'PRIVAT') : 'GETEILT VON ' + X.name(o.user_id).toUpperCase();
-    S.station = null; knoepfe(eigen(o) ? 'eigen' : 'fremd');
-    if (o.kategorie === 'oepnv') abfahrtenFuerPunkt(o.lat, o.lon); else stoppeAbfahrten();
+    $('#ort-bearbeiten').hidden = !eigen(o); $('#ort-loeschen').hidden = !eigen(o);
     $('#feld-ort').hidden = false; document.body.classList.add('ort-offen');
     zeichneMarker();
   }
-  function schliesseOrt() { S.gewaehlt = null; S.station = null; stoppeAbfahrten(); $('#feld-ort').hidden = true; document.body.classList.remove('ort-offen'); zeichneMarker(); }
+  function schliesseOrt() { S.gewaehlt = null; $('#feld-ort').hidden = true; document.body.classList.remove('ort-offen'); zeichneMarker(); }
   $('#ort-zu').addEventListener('click', schliesseOrt);
   $('#ort-route').addEventListener('click', () => {
-    if (S.station) { const st = S.station; zeigeReiter('route'); setzePunkt('ziel', { lat: st.lat, lon: st.lon }, true); berechne(); return; }
     const id = S.gewaehlt; zeigeReiter('route');
     $('#route-ziel').value = 'ort:' + id;
     if ($('#route-start').value === 'ort:' + id) $('#route-start').value = 'pos';
@@ -338,12 +326,8 @@ window.Karte = (function () {
     const pos = { lat: e.lngLat.lat, lon: e.lngLat.lng };
     if (S.klickZiel) { setzePunkt(S.klickZiel, pos); return; }
     if (S.setzen) { setzenModus(false); oeffneFenster(null, pos); return; }
-    const p = e.point, f = map.getLayer('hst') ? map.queryRenderedFeatures([[p.x - 8, p.y - 8], [p.x + 8, p.y + 8]], { layers: ['hst'] }) : [];
-    if (f.length) { zeigeHaltestelle(S.stationen.get(f[0].properties.id)); return; }
-    if (S.gewaehlt || S.station) schliesseOrt();
+    if (S.gewaehlt) schliesseOrt();
   });
-  map.on('mouseenter', 'hst', () => { map.getCanvas().style.cursor = 'pointer'; });
-  map.on('mouseleave', 'hst', () => { map.getCanvas().style.cursor = ''; });
 
   // ------------------------------------------------------------------ Orte speichern (Supabase, Tabelle orte)
   function sichern() { lokal.set('orte-' + X.user.id, S.orte); zeichneFilter(); zeichneMarker(); if (!$('[data-feld="orte"]').hidden) zeichneListe(); }
@@ -514,96 +498,6 @@ window.Karte = (function () {
     map.fitBounds(bb, { padding: schmal ? { top: 90, bottom: window.innerHeight * 0.5, left: 30, right: 30 } : { top: 110, bottom: 90, left: 360, right: 80 }, maxZoom: 17, duration: 900, pitch: map.getPitch(), bearing: map.getBearing() });
   }
 
-  // ------------------------------------------------------------------ Haltestellen & Abfahrten (MVG)
-  const MVG = 'https://www.mvg.de/api/bgw-pt/v3';
-  // Haltestellen gehören zum Filter „Bahn & Bus“
-  function hstAn() { return S.filter.oepnv !== false; }
-  function hstSichtbar() {
-    for (const id of ['hst', 'hst-name']) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', hstAn() ? 'visible' : 'none');
-    if (hstAn()) stationenLaden();
-    if (S.station && !hstAn()) schliesseOrt();
-  }
-  S.stationen = new Map(); S.station = null;
-  const BAHN = new Set(['SBAHN', 'UBAHN', 'BAHN', 'TRAM']);
-  function hstDaten() {
-    return { type: 'FeatureCollection', features: Array.from(S.stationen.values()).map((st) => ({ type: 'Feature',
-      properties: { id: st.id, name: st.name, bahn: st.typen.some((t) => BAHN.has(t)) ? 1 : 0 }, geometry: { type: 'Point', coordinates: [st.lon, st.lat] } })) };
-  }
-  async function mvg(pfad) {
-    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 10000);
-    try { const r = await fetch(MVG + pfad, { signal: ctl.signal }); if (!r.ok) throw new Error('MVG ' + r.status); return await r.json(); }
-    finally { clearTimeout(t); }
-  }
-  const geladen = new Set();
-  async function stationenLaden() {
-    if (!hstAn() || map.getZoom() < 13.5) return;
-    const c = map.getCenter(), key = c.lat.toFixed(3) + ',' + c.lng.toFixed(3);
-    if (geladen.has(key)) return; geladen.add(key);
-    try {
-      const l = await mvg(`/stations/nearby?latitude=${c.lat.toFixed(5)}&longitude=${c.lng.toFixed(5)}`);
-      let neu = false;
-      for (const x of l) if (!S.stationen.has(x.globalId)) { neu = true; S.stationen.set(x.globalId, { id: x.globalId, name: x.name, lat: x.latitude, lon: x.longitude, typen: x.transportTypes || [] }); }
-      if (neu && map.getSource('hst')) map.getSource('hst').setData(hstDaten());
-    } catch (e) { geladen.delete(key); }
-  }
-  let hstT = 0;
-  map.on('moveend', () => { clearTimeout(hstT); hstT = setTimeout(stationenLaden, 400); });
-  map.on('load', stationenLaden);
-
-  function knoepfe(art) { // 'eigen' | 'fremd' | 'station'
-    $('#ort-bearbeiten').hidden = art !== 'eigen'; $('#ort-loeschen').hidden = art !== 'eigen'; $('#ort-merken').hidden = art !== 'station';
-  }
-  const TYP = { SBAHN: 'S-Bahn', UBAHN: 'U-Bahn', TRAM: 'Tram', BUS: 'Bus', BAHN: 'Regionalzug', REGIONAL_BUS: 'Regionalbus' };
-  function zeigeHaltestelle(st) {
-    if (!st) return;
-    S.gewaehlt = null; S.station = st; zeichneMarker();
-    $('#ort-name').textContent = st.name;
-    $('#ort-art').innerHTML = ikon('oepnv') + `<span>${esc(st.typen.map((t) => TYP[t] || t).join(' · ') || 'Haltestelle')}</span>`;
-    $('#ort-notiz').textContent = ''; $('#ort-wer').textContent = 'HALTESTELLE';
-    knoepfe('station');
-    $('#feld-ort').hidden = false; document.body.classList.add('ort-offen');
-    abfahrtenStarten(st.id);
-  }
-  $('#ort-merken').addEventListener('click', async () => {
-    const st = S.station; if (!st) return;
-    const o = await neuerOrt({ name: st.name, kategorie: 'oepnv', notiz: '', lat: st.lat, lon: st.lon, geteilt: false });
-    if (o) waehle(o.id);
-  });
-  let abT = 0, abId = null;
-  function stoppeAbfahrten() { clearInterval(abT); abId = null; $('#ort-abfahrten').hidden = true; }
-  async function abfahrtenFuerPunkt(lat, lon) {
-    stoppeAbfahrten();
-    try { const l = await mvg(`/stations/nearby?latitude=${lat.toFixed(5)}&longitude=${lon.toFixed(5)}`); if (l[0] && l[0].distanceInMeters < 400) abfahrtenStarten(l[0].globalId, l[0].name); }
-    catch (e) { /* ohne Abfahrten */ }
-  }
-  function abfahrtenStarten(id, name) {
-    stoppeAbfahrten(); abId = id;
-    const el = $('#ort-abfahrten'); el.hidden = false;
-    el.innerHTML = `<div class="kopfzeile"><span>ABFAHRTEN${name ? ' · ' + esc(name).toUpperCase() : ''}</span><span>…</span></div>`;
-    const laden = async () => {
-      if (abId !== id) return;
-      try {
-        const l = await mvg(`/departures?globalId=${encodeURIComponent(id)}&limit=12&offsetInMinutes=0`);
-        if (abId !== id) return;
-        const jetzt = Date.now();
-        const zeilen = l.filter((d) => d.realtimeDepartureTime >= jetzt - 60000).slice(0, 10).map((d) => {
-          const min = Math.round((d.realtimeDepartureTime - jetzt) / 60000);
-          const uhr = new Date(d.realtimeDepartureTime).toLocaleTimeString('de', { hour: '2-digit', minute: '2-digit' });
-          const spaet = d.delayInMinutes > 0 ? `<span class="spaet">+${d.delayInMinutes}</span>` : '';
-          const wo = d.platform ? 'Gleis ' + d.platform : d.stopPositionNumber ? 'Steig ' + d.stopPositionNumber : '';
-          return `<div class="abfahrt${d.cancelled ? ' aus' : ''}"><span class="linie${d.transportType === 'SBAHN' || d.transportType === 'UBAHN' ? ' s' : ''}">${esc(d.label)}</span>
-            <span class="ziel">${esc(d.destination)}<small>${d.cancelled ? 'FÄLLT AUS' : esc(wo)}</small></span>
-            <span class="zeit">${min <= 0 ? 'jetzt' : min < 60 ? min + ' min' : uhr}${spaet}</span></div>`;
-        });
-        el.innerHTML = `<div class="kopfzeile"><span>ABFAHRTEN${name ? ' · ' + esc(name).toUpperCase() : ''}</span><span>${new Date().toLocaleTimeString('de', { hour: '2-digit', minute: '2-digit' })}</span></div>` +
-          (zeilen.length ? zeilen.join('') : '<div class="leer">Keine Abfahrten in nächster Zeit.</div>');
-      } catch (e) {
-        el.innerHTML = `<div class="kopfzeile"><span>ABFAHRTEN</span></div><div class="leer">Abfahrten gerade nicht erreichbar.</div>`;
-      }
-    };
-    laden(); abT = setInterval(laden, 30000);
-  }
-
   // ------------------------------------------------------------------ Einstellungen: Ansicht
   $('#opt-3d').checked = lokal.get('3d', true);
   $('#opt-3d').addEventListener('change', (e) => {
@@ -618,7 +512,7 @@ window.Karte = (function () {
     if (e.key !== 'Escape' || $('#ansicht-karte').hidden) return;
     if (!$('#fenster-ort').hidden) { $('#fenster-ort').hidden = true; return; }
     if (S.klickZiel || S.setzen) { S.klickZiel = null; setzenModus(false); $$('[data-klick]').forEach((x) => x.classList.remove('wartet')); document.body.classList.remove('setzen'); return; }
-    if (S.gewaehlt || S.station) schliesseOrt();
+    if (S.gewaehlt) schliesseOrt();
   });
 
   // ------------------------------------------------------------------ Start
