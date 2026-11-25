@@ -47,12 +47,11 @@ window.Karte = (function () {
     einkaufen: '<path d="M2 4h3l2.4 11h11l2-8H6.3" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="19.5" r="1.6" fill="currentColor"/><circle cx="17" cy="19.5" r="1.6" fill="currentColor"/>',
     freizeit: '<path d="M12 3 22 20H2z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 10v5M12 17v1.2" stroke="currentColor" stroke-width="1.8"/>',
     arbeit: '<path d="M4 21V5l8-3 8 3v16M9 21v-5h6v5M8 8h2M14 8h2M8 12h2M14 12h2" fill="none" stroke="currentColor" stroke-width="1.8"/>',
-    oepnv: '<rect x="5" y="3" width="14" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 11h14M8 20l2-3M16 20l-2-3" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="14" r="1" fill="currentColor"/><circle cx="15" cy="14" r="1" fill="currentColor"/>',
     sonstiges: '<path d="M12 3 21 12 12 21 3 12z" fill="none" stroke="currentColor" stroke-width="1.8"/>',
   };
   const KAT = [
     { id: 'wichtig', name: 'Wichtig' }, { id: 'essen', name: 'Essen & Trinken' }, { id: 'einkaufen', name: 'Einkaufen' },
-    { id: 'freizeit', name: 'Freizeit' }, { id: 'arbeit', name: 'Uni & Arbeit' }, { id: 'oepnv', name: 'Bahn & Bus' },
+    { id: 'freizeit', name: 'Freizeit' }, { id: 'arbeit', name: 'Uni & Arbeit' },
     { id: 'sonstiges', name: 'Sonstiges' },
   ];
   const katName = (id) => (KAT.find((k) => k.id === id) || KAT[KAT.length - 1]).name;
