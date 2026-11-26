@@ -280,7 +280,7 @@ window.Karte = (function () {
   $('#orte-liste').addEventListener('click', (e) => {
     const li = e.target.closest('li[data-id]'); if (!li) return;
     const o = S.orte.find((x) => x.id === li.dataset.id); if (!o) return;
-    map.flyTo({ center: [o.lon, o.lat], zoom: Math.max(map.getZoom(), 16), duration: 900 });
+    map.flyTo({ center: [o.lon, o.lat], zoom: Math.max(map.getZoom(), 16), duration: 900, offset: matchMedia('(max-width: 820px)').matches ? [0, -Math.round(map.getContainer().clientHeight * 0.22)] : [0, 0] });
     waehle(o.id);
   });
 

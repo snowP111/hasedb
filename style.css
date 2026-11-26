@@ -180,6 +180,15 @@ body.setzen .maplibregl-canvas { cursor: crosshair; }
   .feld.links { left: 8px; right: 8px; width: auto; top: auto; bottom: 8px; max-height: 46%; }
   .feld.rechts { left: 8px; right: 8px; width: auto; top: auto; bottom: 8px; }
   .feld.links.zu { max-height: 52px; overflow: hidden; }
+  /* Feld als Spalte: Reiter oben fest, Inhalt scrollt innen, Knopf bleibt immer sichtbar */
+  .feld.links { display: flex; flex-direction: column; max-height: 58%; overflow: hidden; padding-bottom: 0; }
+  .feld.links > nav { flex: none; }
+  .feld.links > section:not([hidden]) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-bottom: 10px; }
+  .feld.links > section[data-feld="orte"]:not([hidden]), .feld.links > section[data-feld="route"]:not([hidden]) { display: block; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .feld.links .filter { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; grid-template-columns: 1fr 1fr; }
+  .feld.links .filter li { padding: 9px 12px; gap: 10px; font-size: 14px; }
+  .feld.links .feld-fuss { flex: none; }
+  .feld.links.zu > section { display: none; }
   .kompass { left: auto; right: 10px; top: 10px; bottom: auto; width: 56px; height: 56px; }
   .kompass svg { inset: 10px; width: 36px; height: 36px; }
   .kompass-n { font-size: 9px; top: 1px; }
