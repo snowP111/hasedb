@@ -144,7 +144,7 @@ section > .knopf { margin: 14px 16px 0; width: calc(100% - 32px); }
 
 
 /* ---------- Markierungen auf der Karte ---------- */
-.mk { position: relative; width: 34px; height: 34px; cursor: pointer; }
+.mk { position: absolute; top: 0; left: 0; width: 34px; height: 34px; cursor: pointer; }
 .mk-in { position: absolute; inset: 0; transform: scale(var(--mk, 1)); transform-origin: center; transition: transform .12s; }
 .mk .raute {
   position: absolute; inset: 6px; transform: rotate(45deg); background: rgba(12, 12, 14, .9); border: 1.5px solid var(--text);
@@ -389,7 +389,9 @@ h1 { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -.01em; }
   .streifen span { height: 18px; }
   .fenster.gross { width: 100%; }
   .schleier { align-items: flex-end; padding: 0; }
-  .schleier .fenster { max-height: 88vh; overflow: auto; }
+  /* Fenster endet über der Reiterleiste unten und scrollt innen, statt unter ihr zu verschwinden */
+  .schleier { bottom: calc(54px + var(--safe-b)); }
+  .schleier .fenster { max-height: calc(100% - 8px); overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 }
 
 /* Route verfolgen */
