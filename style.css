@@ -270,23 +270,9 @@ h1, .headline { margin: 0; font-size: clamp(40px, 6vw, 64px); font-weight: 600; 
 .kuerzel.ich { border-color: var(--accent); color: var(--accent); }
 
 /* Zuletzt / Listen */
-.zeile-link { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; }
-.zeile-link:first-child { border-top: 0; }
-.zeile-link:hover .z-name { color: var(--accent); }
-.z-name { font-weight: 500; }
-.z-info { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 2px; }
 
-/* Smoke-Karte (Übersicht) */
-.serie { display: flex; align-items: baseline; gap: 12px; }
-.serie-zahl { font-size: 72px; font-weight: 300; letter-spacing: -.04em; line-height: 1; color: var(--accent); }
-.serie-text { font-size: 11px; letter-spacing: .16em; color: var(--muted); }
-.status { margin: 10px 0 12px; font-size: 13px; }
-.streifen { display: grid; grid-template-columns: repeat(14, 1fr); gap: 3px; margin-top: 14px; }
-.streifen span { height: 22px; border: 1px solid var(--line-strong); font-size: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--mono); }
-.streifen .frei, .kal-tag.frei { background: rgba(235, 233, 228, .12); border-color: var(--text); }
-.streifen .geraucht, .kal-tag.geraucht { background: rgba(var(--accent-rgb), .25); border-color: var(--accent); }
-.vgl-kurz { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
-.vgl-kurz b { color: var(--text); font-weight: 500; }
+.kal-tag.frei { background: rgba(235, 233, 228, .12); border-color: var(--text); }
+.kal-tag.geraucht { background: rgba(var(--accent-rgb), .25); border-color: var(--accent); }
 
 /* Kalender */
 .kalender { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
@@ -303,10 +289,6 @@ h1, .headline { margin: 0; font-size: clamp(40px, 6vw, 64px); font-weight: 600; 
 .stepper .knopf { font-size: 20px; padding: 6px 18px; letter-spacing: 0; }
 .stepper .zaehler { font-size: 48px; font-weight: 300; min-width: 56px; text-align: center; font-variant-numeric: tabular-nums; }
 .editor-knoepfe { display: grid; gap: 8px; }
-.legende { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 16px; font-size: 11px; color: var(--muted); }
-.legende i { display: inline-block; width: 10px; height: 10px; border: 1px solid var(--line-strong); margin-right: 6px; vertical-align: -1px; }
-.legende i.frei { background: rgba(235, 233, 228, .2); border-color: var(--text); }
-.legende i.geraucht { background: rgba(var(--accent-rgb), .45); border-color: var(--accent); }
 
 /* Diagramme (Chart.js) */
 .diagramm { position: relative; height: 200px; }
@@ -409,15 +391,9 @@ h1, .headline { margin: 0; font-size: clamp(40px, 6vw, 64px); font-weight: 600; 
   .raster.zwei, .raster.zwei.breit-links, .kalender-raster { grid-template-columns: 1fr; }
   .nur-breit { display: none; }
   .tabelle td, .tabelle th { padding: 10px 6px; }
-  .serie-zahl { font-size: 56px; }
-  /* Smoke auf der Übersicht: Hauptknopf oben über die ganze Breite, +1 / −1 darunter nebeneinander */
-  #start-smoke .leiste { flex-wrap: wrap; }
-  #start-smoke .leiste .knopf.voll { flex: 1 1 100%; }
-  #start-smoke .leiste .knopf:not(.voll) { flex: 1 1 0; }
   .kal-tag { aspect-ratio: 1; padding: 3px 4px; font-size: 11px; }
   .kal-tag .anz { font-size: 11px; }
   .kalender { gap: 3px; }
-  .streifen span { height: 18px; }
   .diagramm { height: 170px; }
 }
 
@@ -569,3 +545,58 @@ wa-tooltip::part(body) { border: 1px solid var(--line-strong); color: var(--text
 .zwei-felder { margin-top: 24px; align-items: start; }
 .zwei-felder .beschr, .zwei-felder wa-radio-group { margin-top: 0; }
 .zwei-felder wa-radio { min-height: 50px; }
+
+/* =====================================================================
+   Übersicht: zwei getrennte Teile – Smoke (Hauptsache) und Sorten
+   ===================================================================== */
+.start { display: grid; grid-template-columns: 7fr 5fr; gap: 0; }
+.start-smoke { padding-right: 64px; min-width: 0; }
+.start-sorten { padding-left: 48px; border-left: 1px solid var(--line); min-width: 0; padding-top: 4px; }
+.held { font-size: clamp(48px, 13vw, 96px); font-weight: 600; letter-spacing: -.045em; line-height: .92; margin: 0; }
+.held .rot { color: var(--accent); }
+.held-unter { margin: 16px 0 0; font-size: 16px; color: var(--muted); }
+.rot-label { color: var(--accent-hell); }
+
+/* Verlauf 14 Tage – die Grafik der Startseite */
+.verlauf { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 6px; margin: 48px 0 32px; }
+.v-tag { display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-width: 0; }
+.v-saeule { height: 96px; display: flex; align-items: flex-end; border-bottom: 1px solid var(--line-strong); }
+.v-saeule i { display: block; width: 100%; transition: height .2s; }
+.v-tag.frei i { background: var(--text); }
+.v-tag.geraucht i { background: var(--accent); }
+.v-tag span { font-size: 10px; font-weight: 600; letter-spacing: .1em; color: var(--faint); text-align: center; }
+.v-tag.heute span { color: var(--text); }
+.v-tag.heute .v-saeule { border-bottom: 2px solid var(--accent); }
+@media (prefers-reduced-motion: reduce) { .v-saeule i { transition: none; } }
+
+.start-aktion { display: flex; gap: 8px; }
+.start-aktion .knopf.voll { flex: 1 1 auto; }
+.start-aktion .knopf:not(.voll) { flex: 0 0 auto; min-width: 72px; font-size: 15px; letter-spacing: 0; }
+.start-aktion .knopf.voll:disabled { opacity: 1; background: transparent; border-color: var(--line-strong); color: var(--muted); }
+.start-links { display: flex; gap: 32px; flex-wrap: wrap; }
+
+.sorten-zahl { display: flex; align-items: baseline; gap: 12px; margin-top: 16px; font-size: 21px; font-weight: 500; }
+.sorten-zahl span { font-size: 72px; font-weight: 300; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.start-grafik { margin-top: 32px; }
+.start-grafik .diagramm { height: 120px; }
+.start-neu { margin-top: 64px; }
+.liste-zeilen { border-bottom: 1px solid var(--line); }
+.zeile { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 12px; min-height: 56px; padding: 10px 0; background: none; border: 0; border-top: 1px solid var(--line); color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.zeile b { display: block; font-weight: 500; font-size: 16px; }
+.zeile small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.zeile .pfeil { margin: 0; color: var(--muted); }
+@media (hover: hover) { .zeile:hover b { color: var(--accent-hell); } .zeile:hover .pfeil { color: var(--text); } }
+
+@media (max-width: 820px) {
+  .start { grid-template-columns: 1fr; }
+  .start-smoke { padding-right: 0; }
+  .start-sorten { padding: 32px 0 0; margin-top: 64px; border-left: 0; border-top: 1px solid var(--line); }
+  .verlauf { gap: 4px; margin: 32px 0 24px; }
+  .v-saeule { height: 72px; }
+  .start-neu { margin-top: 48px; }
+}
+.start-aktion .knopf.voll { white-space: nowrap; }
+@media (max-width: 380px) {
+  .start-aktion .knopf.voll { letter-spacing: .1em; padding-inline: 12px; }
+  .start-aktion .knopf:not(.voll) { min-width: 56px; }
+}
