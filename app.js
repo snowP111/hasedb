@@ -159,7 +159,7 @@
     $('#start-smoke').innerHTML = `<div class="box-kopf"><span>DEIN SMOKE-COUNTER</span><button class="verlinkt" data-geh="smoke">KALENDER →</button></div>
       <div class="serie"><span class="serie-zahl">${r.serie}</span><span class="serie-text">${r.serie === 1 ? 'TAG' : 'TAGE'} RAUCHFREI · REKORD ${r.rekord}</span></div>
       <div class="status">${status}</div>
-      <div class="leiste"><button class="knopf voll" data-smoke="frei">HEUTE RAUCHFREI</button><button class="knopf" data-smoke="plus">+1 GERAUCHT</button><button class="knopf" data-smoke="minus" ${r.heute > 0 ? '' : 'disabled'}>−1</button></div>
+      <div class="leiste"><button class="knopf voll" data-smoke="frei">HEUTE RAUCHFREI</button><button class="knopf" data-smoke="plus" aria-label="Einmal geraucht">+1</button><button class="knopf" data-smoke="minus" ${r.heute > 0 ? '' : 'disabled'}>−1</button></div>
       <div class="streifen">${r.letzteTage(14).map((t) => `<span class="${t.anzahl === null ? '' : t.anzahl === 0 ? 'frei' : 'geraucht'}" title="${t.datum.getDate()}.${t.datum.getMonth() + 1}.">${t.anzahl > 0 ? t.anzahl : ''}</span>`).join('')}</div>
       ${andere ? `<div class="vgl-kurz">${andere}</div>` : ''}`;
     // Zuletzt
