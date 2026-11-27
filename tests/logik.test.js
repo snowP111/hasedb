@@ -57,5 +57,12 @@ eq('Vergleich rauchfrei', v.rauchfrei, [4, 1]);
 eq('Vergleich Serien', v.serien, [4, 0]);
 eq('Vergleich Tage', v.tage.length, 7);
 
+// Vergleich mit vier Personen (Gruppen-Umbau)
+const v4 = L.vergleich([{ name: 'Lucas', tage }, { name: 'Max', tage: { '2026-11-24': 3, '2026-11-23': 0 } }, { name: 'Anna', tage: {} }, { name: 'patong', tage: { '2026-11-25': 0 } }], 7, H);
+eq('Vergleich 4: Summen', v4.summen, [2, 3, 0, 0]);
+eq('Vergleich 4: rauchfrei', v4.rauchfrei, [4, 1, 0, 1]);
+eq('Vergleich 4: eingetragen', v4.eingetragen, [5, 2, 0, 1]);
+eq('Vergleich 4: Werte je Tag', v4.tage[0].werte.length, 4);
+
 console.log(`${ok} bestanden, ${fail} fehlgeschlagen`);
 process.exit(fail ? 1 : 0);

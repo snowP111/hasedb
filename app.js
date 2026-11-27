@@ -1,5 +1,6 @@
-/* HaseDB – Web-App für Mac und iPhone, zwei Personen.
- * Sorten (gemeinsam) mit Reviews je Person, Statistik, Smoke-Counter je Person mit Vergleich, Karte.
+/* HaseDB – Web-App für Mac und iPhone, mehrere Personen in Gruppen.
+ * Sorten je Gruppe (Lucas + patong teilen eine Liste) mit Reviews je Person, Statistik,
+ * Smoke-Counter je Person mit Vergleich aller, Karte (Orte für alle oder für die eigene Gruppe).
  * Daten: Supabase (Tabellen hases, reviews, rauchtage, profile, orte). Logik ohne Oberfläche: logik.js */
 (function () {
   'use strict';
@@ -16,10 +17,10 @@
   const sb = window.supabase.createClient(C.supabaseUrl.replace(/\/rest\/v1\/?$/, ''), C.supabaseKey);
 
   const Z = {
-    user: null, profile: {}, hases: [], tage: {}, ansicht: 'start',
+    user: null, profile: {}, gruppe: {}, hases: [], tage: {}, ansicht: 'start',
     sort: { k: 'name', auf: true },
     filter: { name: '', thcMin: null, thcMax: null, terpene: [], bestrahlt: null, mitReview: null },
-    monat: null, tag: null, vglTage: 30,
+    monat: null, tag: null, vglTage: 30, vglSort: 'serie', vglMit: null,
   };
 
   let meldungT = 0;
@@ -36,6 +37,9 @@
     return 'Unbenannt';
   }
   const kuerzel = (uid) => name(uid).charAt(0).toUpperCase();
+  const gruppeVon = (uid) => Z.gruppe[uid] || uid;
+  /** Personen, die dieselbe Sortenliste teilen (Reviews). */
+  const gruppe = () => personen().filter((p) => gruppeVon(p) === gruppeVon(ich()));
   function personen() {
     const ids = new Set([ich(), ...Object.keys(Z.profile), ...Object.keys(Z.tage)]);
     return [...ids].sort((a, b) => (a === ich() ? -1 : b === ich() ? 1 : name(a).localeCompare(name(b), 'de')));
@@ -47,12 +51,12 @@
       sb.from('hases').select('id,name,thc,terpene,bestrahlt').order('id'),
       sb.from('reviews').select('hase_id,user_id,text,geaendert'),
       sb.from('rauchtage').select('user_id,datum,anzahl'),
-      sb.from('profile').select('user_id,name'),
+      sb.from('profile').select('user_id,name,gruppe'),
     ]);
     const fehler = h.error || r.error || t.error || p.error;
     if (fehler) {
-      const umbau = /reviews|profile|user_id|does not exist|schema cache/i.test(fehler.message);
-      meldung(umbau ? 'Datenbank noch nicht umgebaut – bitte supabase/umbau-zwei-personen.sql ausführen.' : 'Laden fehlgeschlagen: ' + fehler.message, 8000);
+      const umbau = /reviews|profile|user_id|gruppe|does not exist|schema cache/i.test(fehler.message);
+      meldung(umbau ? 'Datenbank noch nicht umgebaut – bitte supabase/umbau-gruppen.sql ausführen.' : 'Laden fehlgeschlagen: ' + fehler.message, 8000);
       return false;
     }
     const rev = new Map();
@@ -60,8 +64,8 @@
     Z.hases = h.data.map((x) => ({ ...x, reviews: (rev.get(x.id) || []).filter((y) => y.text && y.text.trim()) }));
     Z.tage = {};
     for (const x of t.data) { (Z.tage[x.user_id] = Z.tage[x.user_id] || {})[x.datum] = x.anzahl; }
-    Z.profile = {};
-    for (const x of p.data) Z.profile[x.user_id] = x.name;
+    Z.profile = {}; Z.gruppe = {};
+    for (const x of p.data) { Z.profile[x.user_id] = x.name; Z.gruppe[x.user_id] = x.gruppe; }
     return true;
   }
   async function neuZeichnen() { if (await laden()) zeichne(); }
@@ -99,7 +103,7 @@
     $$('.ansicht').forEach((s) => { s.hidden = s.id !== 'ansicht-' + a; });
     $('main').scrollTop = 0;
     if (a === 'karte') {
-      if (!window.Karte.gestartet()) window.Karte.start({ sb, user: Z.user, name, meldung });
+      if (!window.Karte.gestartet()) window.Karte.start({ sb, user: Z.user, name, gruppeVon, meldung });
       window.Karte.zeigen();
     }
     zeichne();
@@ -236,7 +240,7 @@
 
   function details(h) {
     if (!h) return;
-    const reviews = personen().map((p) => {
+    const reviews = gruppe().map((p) => {
       const r = h.reviews.find((x) => x.user_id === p), meins = p === ich();
       return `<div class="review${meins ? ' ich' : ''}" data-person="${p}">
         <div class="review-wer"><span>${esc(name(p)).toUpperCase()}</span>${meins ? `<button class="verlinkt" data-aktion="review">${r ? 'BEARBEITEN' : 'SCHREIBEN'}</button>` : ''}</div>
@@ -256,7 +260,7 @@
       if (art === 'zu') blattZu();
       if (art === 'bearbeiten') formular(h);
       if (art === 'loeschen') {
-        if (!confirm(`„${h.name}“ wirklich löschen? Das kann nicht rückgängig gemacht werden – auch die Reviews beider Personen werden gelöscht.`)) return;
+        if (!confirm(`„${h.name}“ wirklich löschen? Das kann nicht rückgängig gemacht werden – auch alle Reviews dazu werden gelöscht.`)) return;
         const { error } = await sb.from('hases').delete().eq('id', h.id);
         if (error) { meldung('Löschen fehlgeschlagen: ' + error.message, 5000); return; }
         blattZu(); meldung('Gelöscht'); neuZeichnen();
@@ -397,32 +401,40 @@
   function zeichneVergleich() {
     const ps = personen(), el = $('#vergleich');
     if (ps.length < 2) {
-      el.innerHTML = `<div class="box-kopf"><span>VERGLEICH</span></div><p class="leise">Sobald die zweite Person sich anmeldet und etwas einträgt, erscheint hier euer Vergleich.</p>`;
+      el.innerHTML = `<div class="box-kopf"><span>VERGLEICH</span></div><p class="leise">Erscheint, sobald weitere Personen etwas eintragen.</p>`;
       return;
     }
-    const zwei = ps.slice(0, 2), n = Z.vglTage;
-    const v = L.vergleich(zwei.map((p) => ({ id: p, name: name(p), tage: Z.tage[p] || {} })), n, L.heute());
-    const best = (arr, hoch) => { const z = hoch ? Math.max(...arr) : Math.min(...arr); return arr.map((x) => x === z && arr.filter((y) => y === z).length === 1); };
-    const bS = best(v.serien, true), bR = best(v.rekorde, true), bF = best(v.rauchfrei, true), bG = best(v.summen, false);
-    const zeilen = [
-      ['Aktuelle Serie', v.serien, bS, (x) => x + (x === 1 ? ' Tag' : ' Tage')],
-      ['Rekord', v.rekorde, bR, (x) => x + (x === 1 ? ' Tag' : ' Tage')],
-      [`Rauchfrei (${n} T.)`, v.rauchfrei, bF, (x) => x],
-      [`Mal geraucht (${n} T.)`, v.summen, bG, (x) => x + '×'],
-      ['Eingetragen', v.eingetragen, [false, false], (x) => `${x} / ${n}`],
+    const n = Z.vglTage;
+    const v = L.vergleich(ps.map((p) => ({ id: p, name: name(p), tage: Z.tage[p] || {} })), n, L.heute());
+    // Rangliste: Personen als Zeilen – funktioniert für beliebig viele Personen und jede Displaybreite
+    const SP = [
+      { k: 'serie', t: 'SERIE', w: v.serien, hoch: true, f: (x) => x },
+      { k: 'frei', t: 'RAUCH&shy;FREI', w: v.rauchfrei, hoch: true, f: (x) => x },
+      { k: 'geraucht', t: 'GE&shy;RAUCHT', w: v.summen, hoch: false, f: (x) => x + '×' },
     ];
+    const best = (s) => { const z = s.hoch ? Math.max(...s.w) : Math.min(...s.w); const anz = s.w.filter((x) => x === z).length; return s.w.map((x) => x === z && anz < s.w.length); };
+    const bester = SP.map(best);
+    const sp = SP.find((s) => s.k === Z.vglSort) || SP[0];
+    const reihe = ps.map((p, i) => i).sort((a, b) => (sp.hoch ? sp.w[b] - sp.w[a] : sp.w[a] - sp.w[b]) || v.serien[b] - v.serien[a] || name(ps[a]).localeCompare(name(ps[b]), 'de'));
+    // Diagramme: ich + eine gewählte Person
+    const andere = ps.filter((p) => p !== ich());
+    if (!andere.includes(Z.vglMit)) Z.vglMit = andere[0];
+    const zwei = [ich(), Z.vglMit], idx = zwei.map((p) => ps.indexOf(p));
     el.innerHTML = `<div class="box-kopf"><span>VERGLEICH</span><div class="segment" id="vgl-n">${[7, 30, 90].map((x) => `<button data-n="${x}" class="${x === n ? 'aktiv' : ''}">${x} TAGE</button>`).join('')}</div></div>
-      <table class="vgl-tabelle"><thead><tr><th></th>${zwei.map((p, i) => `<th><span class="punkt${i ? ' weiss' : ''}"></span>${esc(name(p))}</th>`).join('')}</tr></thead><tbody>
-      ${zeilen.map(([t, w, b, f]) => `<tr><td>${t}</td>${w.map((x, i) => `<td class="${b[i] ? 'besser' : ''}">${f(x)}</td>`).join('')}</tr>`).join('')}
+      <table class="vgl-tabelle rangliste"><thead><tr><th></th>${SP.map((s) => `<th><button data-vs="${s.k}" class="${s === sp ? 'aktiv' : ''}">${s.t}</button></th>`).join('')}</tr></thead><tbody>
+      ${reihe.map((i, platz) => `<tr class="${ps[i] === ich() ? 'ich' : ''}"><td><span class="platz">${platz + 1}</span>${esc(name(ps[i]))}<small>${v.eingetragen[i]} / ${n} eingetragen</small></td>${SP.map((s, k) => `<td class="${bester[k][i] ? 'besser' : ''}">${s.f(s.w[i])}</td>`).join('')}</tr>`).join('')}
       </tbody></table>
+      <div class="vgl-mit"><span class="beschr-inline">DU UND</span><div class="chips" id="vgl-mit">${andere.map((p) => `<button data-p="${esc(p)}" class="${p === Z.vglMit ? 'aktiv' : ''}">${esc(name(p))}</button>`).join('')}</div></div>
       <div class="raster zwei breit-links" style="margin-top:0">
         <div><div class="box-kopf"><span>PRO TAG</span><span class="leise">${zwei.map((p, i) => `<span class="punkt${i ? ' weiss' : ''}"></span>${esc(name(p))}`).join(' &nbsp; ')}</span></div>
-          ${saeulen(v.tage.map((t) => ({ name: `${t.datum.getDate()}.${t.datum.getMonth() + 1}.`, w: t.werte.map((x) => (x > 0 ? x : 0)),
-            tip: `${t.datum.getDate()}.${t.datum.getMonth() + 1}.: ` + zwei.map((p, i) => `${name(p)} ${t.werte[i] === null ? '–' : t.werte[i] === 0 ? 'rauchfrei' : t.werte[i] + '×'}`).join(', ') })), { labels: 10 })}</div>
+          ${saeulen(v.tage.map((t) => ({ name: `${t.datum.getDate()}.${t.datum.getMonth() + 1}.`, w: idx.map((j) => (t.werte[j] > 0 ? t.werte[j] : 0)),
+            tip: `${t.datum.getDate()}.${t.datum.getMonth() + 1}.: ` + zwei.map((p, k) => `${name(p)} ${t.werte[idx[k]] === null ? '–' : t.werte[idx[k]] === 0 ? 'rauchfrei' : t.werte[idx[k]] + '×'}`).join(', ') })), { labels: 10 })}</div>
         <div><div class="box-kopf"><span>NACH WOCHENTAG</span></div>
-          ${saeulen(WT_KURZ.map((w, i) => ({ name: w, w: v.wochentage.map((x) => x[i]), tip: `${WT[(i + 1) % 7]}: ` + zwei.map((p, k) => `${name(p)} ${v.wochentage[k][i]}×`).join(', ') })))}</div>
+          ${saeulen(WT_KURZ.map((w, i) => ({ name: w, w: idx.map((j) => v.wochentage[j][i]), tip: `${WT[(i + 1) % 7]}: ` + zwei.map((p, k) => `${name(p)} ${v.wochentage[idx[k]][i]}×`).join(', ') })))}</div>
       </div>`;
     $('#vgl-n').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; Z.vglTage = +b.dataset.n; zeichneVergleich(); };
+    el.querySelector('thead').onclick = (e) => { const b = e.target.closest('[data-vs]'); if (!b) return; Z.vglSort = b.dataset.vs; zeichneVergleich(); };
+    $('#vgl-mit').onclick = (e) => { const b = e.target.closest('[data-p]'); if (!b) return; Z.vglMit = b.dataset.p; zeichneVergleich(); };
   }
 
   // ------------------------------------------------------------------ Einstellungen
@@ -445,7 +457,7 @@
 
   function fragNachName() {
     blatt(`<form id="name-form"><div class="fenster-kopf">WIE HEISST DU?</div>
-      <p class="hinweis">Dein Name erscheint bei deinen Reviews, im Smoke-Counter-Vergleich und bei geteilten Orten. Ändern kannst du ihn unter Einstellungen.</p>
+      <p class="hinweis">Dein Name erscheint bei deinen Reviews, im Smoke-Vergleich und bei deinen Orten. Ändern kannst du ihn im Profil.</p>
       <label class="beschr">NAME</label><input class="eingabe" name="n" maxlength="40" value="${esc(name(ich()))}" autocomplete="off">
       <div class="knopfreihe" style="margin:16px 16px 0"><button class="knopf voll" type="submit">SPEICHERN</button></div></form>`);
     $('#name-form').onsubmit = async (e) => { e.preventDefault(); if (await nameSpeichern(e.target.n.value)) { blattZu(); zeichne(); } };

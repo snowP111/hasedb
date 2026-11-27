@@ -1,5 +1,5 @@
-/* HaseDB – Reiter KARTE (ehemals mapApp): 3D-Karte München, Orte (privat/geteilt), A*-Wegfinder.
- * Wird erst beim ersten Öffnen des Reiters gestartet: Karte.start({ sb, user, name(uid), meldung }) */
+/* HaseDB – Reiter KARTE (ehemals mapApp): 3D-Karte München, Orte (für alle oder für die eigene Gruppe), A*-Wegfinder, eigener Standort.
+ * Wird erst beim ersten Öffnen des Reiters gestartet: Karte.start({ sb, user, name(uid), gruppeVon(uid), meldung }) */
 window.Karte = (function () {
   'use strict';
   const CFG = window.HASE_CONFIG.karte;
@@ -248,7 +248,7 @@ window.Karte = (function () {
     $('#ort-name').textContent = o.name;
     $('#ort-art').innerHTML = ikon(o.kategorie) + `<span>${esc(katName(o.kategorie))}</span>`;
     $('#ort-notiz').textContent = o.notiz || '';
-    $('#ort-wer').textContent = eigen(o) ? (o.geteilt ? 'GETEILT' : 'PRIVAT') : 'GETEILT VON ' + X.name(o.user_id).toUpperCase();
+    $('#ort-wer').textContent = (o.geteilt ? 'FÜR ALLE' : 'PRIVAT') + (eigen(o) ? '' : ' · VON ' + X.name(o.user_id).toUpperCase());
     $('#ort-bearbeiten').hidden = !eigen(o); $('#ort-loeschen').hidden = !eigen(o);
     $('#feld-ort').hidden = false; document.body.classList.add('ort-offen');
     zeichneMarker();
@@ -273,7 +273,7 @@ window.Karte = (function () {
     const q = ($('#orte-suche').value || '').toLowerCase().trim();
     const l = S.orte.filter((o) => !q || o.name.toLowerCase().includes(q) || (o.notiz || '').toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name, 'de'));
-    $('#orte-liste').innerHTML = l.length ? l.map((o) => `<li data-id="${esc(o.id)}">${ikon(o.kategorie)}<div><div class="titel">${esc(o.name)}</div><div class="unter">${esc(katName(o.kategorie)).toUpperCase()}${eigen(o) ? (o.geteilt ? ' · GETEILT' : '') : ' · VON ' + esc(X.name(o.user_id)).toUpperCase()}</div></div></li>`).join('')
+    $('#orte-liste').innerHTML = l.length ? l.map((o) => `<li data-id="${esc(o.id)}">${ikon(o.kategorie)}<div><div class="titel">${esc(o.name)}</div><div class="unter">${esc(katName(o.kategorie)).toUpperCase()}${o.geteilt ? ' · FÜR ALLE' : ''}${eigen(o) ? '' : ' · VON ' + esc(X.name(o.user_id)).toUpperCase()}</div></div></li>`).join('')
       : `<li class="leer">${S.orte.length ? 'Nichts gefunden.' : 'Noch keine Orte. Rechtsklick (iPhone: lange drücken) auf die Karte markiert einen Ort.'}</li>`;
   }
   $('#orte-suche').addEventListener('input', zeichneListe);
@@ -532,7 +532,7 @@ window.Karte = (function () {
   }
   function navEnde() {
     if (navWatch !== null) { navigator.geolocation.clearWatch(navWatch); navWatch = null; }
-    if (ichMarker) { ichMarker.remove(); ichMarker = null; }
+    if (ichMarker && ortWatch === null) { ichMarker.remove(); ichMarker = null; }
     folgen = false; $('#nav-folgen').classList.remove('aktiv');
     $('#nav-leiste').hidden = true; $('#route-ergebnis').hidden = true;
     S.letzteRoute = null; S.routeKoord = null;
@@ -547,6 +547,35 @@ window.Karte = (function () {
     if (folgen && !ichMarker) meldung('Warte auf deinen Standort …');
   });
   map.on('dragstart', () => { if (folgen) { folgen = false; $('#nav-folgen').classList.remove('aktiv'); } });
+
+  // ------------------------------------------------------------------ Eigener Standort (Knopf ◎)
+  // Einmal tippen: Standort als Punkt anzeigen und hinfahren · nochmal tippen: ausblenden
+  let ortWatch = null;
+  function standortAus() {
+    if (ortWatch !== null) { navigator.geolocation.clearWatch(ortWatch); ortWatch = null; }
+    if (ichMarker && navWatch === null) { ichMarker.remove(); ichMarker = null; }
+    $('#standort').classList.remove('aktiv', 'sucht');
+  }
+  $('#standort').addEventListener('click', () => {
+    if (ortWatch !== null) {
+      if (ichMarker && !map.getBounds().contains(ichMarker.getLngLat())) { map.easeTo({ center: ichMarker.getLngLat(), duration: 800 }); return; }   // außer Sicht: erst hinfahren
+      standortAus(); return;
+    }
+    if (!navigator.geolocation) { meldung('Dieses Gerät kann den Standort nicht bestimmen'); return; }
+    $('#standort').classList.add('aktiv', 'sucht');
+    let erstes = true;
+    ortWatch = navigator.geolocation.watchPosition((p) => {
+      $('#standort').classList.remove('sucht');
+      const ll = [p.coords.longitude, p.coords.latitude];
+      if (!ichMarker) { const el = document.createElement('div'); el.className = 'ich-mk'; ichMarker = new maplibregl.Marker({ element: el }).setLngLat(ll).addTo(map); }
+      else ichMarker.setLngLat(ll);
+      if (navWatch !== null) position(p);
+      if (erstes) { erstes = false; map.easeTo({ center: ll, zoom: Math.max(map.getZoom(), 16), duration: 900 }); }
+    }, (e) => {
+      meldung(e.code === 1 ? 'Standort nicht erlaubt – in den iPhone-Einstellungen unter Datenschutz → Ortungsdienste erlauben' : 'Standort gerade nicht verfügbar', 5000);
+      standortAus();
+    }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+  });
 
   // ------------------------------------------------------------------ Einstellungen: Ansicht
   $('#opt-3d').checked = lokal.get('3d', true);
