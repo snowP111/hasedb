@@ -12,19 +12,22 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
 <!-- ============================== Anmeldung -->
 <div class="login" id="login" hidden>
   <form class="login-feld" id="login-form">
-    <div class="marke gross"><span class="marke-q"></span>HASE DB</div>
+    <h1 class="headline login-titel">Hase<span>DB</span></h1>
     <label class="beschr">E-MAIL</label>
     <input class="eingabe" id="login-mail" type="email" autocomplete="username" required>
     <label class="beschr">PASSWORT</label>
     <input class="eingabe" id="login-pw" type="password" autocomplete="current-password" required>
-    <button class="knopf voll" type="submit">ANMELDEN</button>
+    <button class="knopf voll" type="submit">ANMELDEN <span class="pfeil">→</span></button>
     <p class="fehler" id="login-fehler"></p>
   </form>
 </div>
@@ -32,22 +35,22 @@
 <!-- ============================== App -->
 <div id="app" hidden>
 <header class="kopf">
-  <div class="marke"><span class="marke-q"></span>HASE DB</div>
+  <div class="marke">Hase<span>DB</span></div>
   <nav class="reiter" id="reiter">
-    <button data-ansicht="start" class="aktiv"><span class="lang">ÜBERSICHT</span><span class="kurz">START</span></button>
-    <button data-ansicht="sorten">SORTEN</button>
-    <button data-ansicht="statistik"><span class="lang">STATISTIK</span><span class="kurz">STATS</span></button>
-    <button data-ansicht="smoke">SMOKE</button>
-    <button data-ansicht="karte">KARTE</button>
-    <button data-ansicht="einstellungen"><span class="lang">EINSTELLUNGEN</span><span class="kurz">PROFIL</span></button>
+    <button data-ansicht="start" class="aktiv">Start</button>
+    <button data-ansicht="sorten">Sorten</button>
+    <button data-ansicht="smoke">Smoke</button>
+    <button data-ansicht="karte">Karte</button>
   </nav>
+  <button class="profil-knopf" id="profil-knopf" data-geh="einstellungen" aria-label="Profil"></button>
 </header>
 
 <main>
   <!-- Übersicht -->
   <section class="ansicht" id="ansicht-start">
-    <div class="seitenkopf"><h1>Übersicht</h1><span class="leise" id="start-datum"></span></div>
+    <div class="seitenkopf"><div><div class="label" id="start-datum"></div><h1>Übersicht</h1></div></div>
     <div class="kennzahlen" id="start-kennzahlen"></div>
+    <button class="textlink" data-geh="statistik">Statistik</button>
     <div class="raster zwei">
       <div class="karte-box" id="start-smoke"></div>
       <div class="karte-box">
@@ -59,7 +62,7 @@
 
   <!-- Sorten -->
   <section class="ansicht" id="ansicht-sorten" hidden>
-    <div class="seitenkopf"><h1>Sorten</h1><button class="knopf voll" id="sorte-neu">+ NEUER EINTRAG</button></div>
+    <div class="seitenkopf"><h1>Sorten</h1><button class="knopf voll" id="sorte-neu">+ NEU</button></div>
     <div class="leiste">
       <input class="eingabe" id="such-name" placeholder="Name suchen …" autocomplete="off">
       <button class="knopf" id="filter-auf">FILTER</button>
@@ -89,11 +92,11 @@
 
   <!-- Statistik -->
   <section class="ansicht" id="ansicht-statistik" hidden>
-    <div class="seitenkopf"><h1>Statistik</h1></div>
+    <div class="seitenkopf"><div><button class="zurueck" data-geh="start">← Übersicht</button><h1>Statistik</h1></div></div>
     <div class="kennzahlen" id="stat-kennzahlen"></div>
     <div class="raster zwei">
-      <div class="karte-box"><div class="box-kopf"><span>THC-VERTEILUNG</span><span class="leise">Einträge je Bereich (%)</span></div><div id="stat-verteilung"></div></div>
-      <div class="karte-box"><div class="box-kopf"><span>HÄUFIGSTE TERPENE</span><span class="leise">in wie vielen Einträgen</span></div><div id="stat-terpene"></div></div>
+      <div class="karte-box"><div class="box-kopf"><span>THC-VERTEILUNG (%)</span></div><div id="stat-verteilung"></div></div>
+      <div class="karte-box"><div class="box-kopf"><span>HÄUFIGSTE TERPENE</span></div><div id="stat-terpene"></div></div>
       <div class="karte-box"><div class="box-kopf"><span>BESTRAHLUNG</span></div><div id="stat-bestrahlung"></div></div>
       <div class="karte-box"><div class="box-kopf"><span>TOP 5 NACH THC</span></div><div id="stat-top"></div></div>
     </div>
@@ -101,7 +104,7 @@
 
   <!-- Smoke-Counter -->
   <section class="ansicht" id="ansicht-smoke" hidden>
-    <div class="seitenkopf"><h1>Smoke-Counter</h1><button class="knopf voll" id="smoke-heute">HEUTE RAUCHFREI</button></div>
+    <div class="seitenkopf"><h1>Smoke</h1><button class="knopf voll" id="smoke-heute">HEUTE RAUCHFREI</button></div>
     <div class="kennzahlen" id="smoke-kennzahlen"></div>
     <div class="raster kalender-raster">
       <div class="karte-box">
@@ -111,8 +114,8 @@
       <div class="karte-box" id="tag-editor"></div>
     </div>
     <div class="raster zwei breit-links">
-      <div class="karte-box"><div class="box-kopf"><span>LETZTE 30 TAGE</span><span class="leise">wie oft pro Tag</span></div><div id="smoke-30"></div></div>
-      <div class="karte-box"><div class="box-kopf"><span>NACH WOCHENTAG</span><span class="leise">Summe aller Einträge</span></div><div id="smoke-woche"></div></div>
+      <div class="karte-box"><div class="box-kopf"><span>LETZTE 30 TAGE</span></div><div id="smoke-30"></div></div>
+      <div class="karte-box"><div class="box-kopf"><span>NACH WOCHENTAG</span></div><div id="smoke-woche"></div></div>
     </div>
     <div class="karte-box vergleich" id="vergleich"></div>
   </section>
@@ -185,7 +188,7 @@
 
   <!-- Einstellungen -->
   <section class="ansicht" id="ansicht-einstellungen" hidden>
-    <div class="seitenkopf"><h1>Einstellungen</h1></div>
+    <div class="seitenkopf"><h1>Profil</h1></div>
     <div class="raster zwei">
       <div class="karte-box">
         <div class="box-kopf"><span>PROFIL</span></div>
@@ -211,10 +214,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="config.js?v=9"></script>
-<script src="logik.js?v=9"></script>
-<script src="graph.js?v=9"></script>
-<script src="karte.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<script src="config.js?v=10"></script>
+<script src="logik.js?v=10"></script>
+<script src="graph.js?v=10"></script>
+<script src="karte.js?v=10"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

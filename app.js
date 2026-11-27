@@ -66,10 +66,36 @@
   }
   async function neuZeichnen() { if (await laden()) zeichne(); }
 
+  // ------------------------------------------------------------------ iPhone: schwarzer Balken unten
+  // Homescreen-Web-Apps auf iOS: Nach dem ersten Öffnen der Tastatur bleibt der Anzeigebereich zu klein,
+  // fest unten sitzende Leisten rutschen hoch und darunter entsteht ein schwarzer Streifen.
+  // Abhilfe: nach dem Schließen der Tastatur einmal kurz neu aufbauen lassen, dann misst WebKit die Höhe neu.
+  (function viewportHeilen() {
+    const homescreen = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+    if (!homescreen) return;
+    let maxH = window.innerHeight;
+    addEventListener('resize', () => { maxH = Math.max(maxH, window.innerHeight); });
+    addEventListener('orientationchange', () => { setTimeout(() => { maxH = window.innerHeight; }, 500); });
+    function heilen() {
+      if (document.activeElement && document.activeElement.matches('input, textarea, select')) return;   // Tastatur noch offen
+      if (maxH - window.innerHeight <= 4) return;
+      const main = document.querySelector('main'), pos = main ? main.scrollTop : 0;
+      document.body.style.display = 'none';
+      void document.body.offsetHeight;
+      document.body.style.display = '';
+      if (main) main.scrollTop = pos;
+      window.scrollTo(0, 0);
+    }
+    document.addEventListener('focusout', (e) => { if (e.target.matches('input, textarea, select')) setTimeout(heilen, 140); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(heilen, 300); });
+  })();
+
   // ------------------------------------------------------------------ Ansichten
   function zeigeAnsicht(a) {
     Z.ansicht = a;
-    $$('#reiter button').forEach((b) => b.classList.toggle('aktiv', b.dataset.ansicht === a));
+    const reiter = a === 'statistik' ? 'start' : a;   // Statistik gehört zur Übersicht, Profil liegt oben rechts
+    $$('#reiter button').forEach((b) => b.classList.toggle('aktiv', b.dataset.ansicht === reiter));
+    $('#profil-knopf').classList.toggle('aktiv', a === 'einstellungen');
     $$('.ansicht').forEach((s) => { s.hidden = s.id !== 'ansicht-' + a; });
     $('main').scrollTop = 0;
     if (a === 'karte') {
@@ -80,6 +106,7 @@
   }
   $$('#reiter button').forEach((b) => b.addEventListener('click', () => zeigeAnsicht(b.dataset.ansicht)));
   function zeichne() {
+    if (Z.user) $('#profil-knopf').textContent = kuerzel(ich());
     ({ start: zeichneStart, sorten: zeichneSorten, statistik: zeichneStatistik, smoke: zeichneSmoke, einstellungen: zeichneEinstellungen })[Z.ansicht]?.();
   }
 
@@ -327,7 +354,7 @@
     if (!Z.tag) Z.tag = hIso;
     const m = r.monat(heute.getFullYear(), heute.getMonth());
     $('#smoke-kennzahlen').innerHTML =
-      kz('AKTUELLE SERIE', `${r.serie} ${r.serie === 1 ? 'Tag' : 'Tage'}`, r.heuteEingetragen ? 'rauchfrei in Folge' : 'heute noch offen – zählt weiter', true) +
+      kz('AKTUELLE SERIE', `${r.serie} ${r.serie === 1 ? 'Tag' : 'Tage'}`, r.heuteEingetragen ? 'rauchfrei in Folge' : 'heute noch offen', true) +
       kz('LÄNGSTE SERIE', `${r.rekord} ${r.rekord === 1 ? 'Tag' : 'Tage'}`, 'Rekord') +
       kz('DIESER MONAT', `${m.rauchfrei} / ${m.geraucht}`, `rauchfrei / geraucht · ${m.einheiten}× insgesamt${m.offen ? ' · ' + m.offen + ' offen' : ''}`) +
       kz('Ø PRO RAUCHTAG', r.schnittProRauchtag ? zahl(r.schnittProRauchtag) + '×' : '–', r.eingetragen + ' Tage eingetragen');
@@ -351,8 +378,7 @@
       <div class="leise">${a === undefined ? 'NICHT EINGETRAGEN' : a === 0 ? 'RAUCHFREI' : a + '× GERAUCHT'}</div>
       <label class="beschr">WIE OFT GERAUCHT?</label>
       <div class="stepper"><button class="knopf" data-ed="minus" ${a > 0 ? '' : 'disabled'}>−</button><span class="zaehler">${a === undefined ? '–' : a}</span><button class="knopf" data-ed="plus">+</button></div>
-      <div class="editor-knoepfe"><button class="knopf voll" data-ed="frei" ${a === 0 ? 'disabled' : ''}>RAUCHFREI ✓</button><button class="knopf gefahr" data-ed="weg" ${a === undefined ? 'disabled' : ''}>EINTRAG ENTFERNEN</button></div>
-      <div class="legende"><span><i class="frei"></i>Rauchfrei</span><span><i class="geraucht"></i>Geraucht (Anzahl)</span><span><i></i>Nicht eingetragen</span></div>`;
+      <div class="editor-knoepfe"><button class="knopf" data-ed="frei" ${a === 0 ? 'disabled' : ''}>RAUCHFREI ✓</button><button class="knopf gefahr" data-ed="weg" ${a === undefined ? 'disabled' : ''}>EINTRAG ENTFERNEN</button></div>`;
     // Diagramme
     $('#smoke-30').innerHTML = saeulen(r.letzteTage(30).map((t) => ({
       name: `${t.datum.getDate()}.${t.datum.getMonth() + 1}.`, w: [t.anzahl > 0 ? t.anzahl : 0],
@@ -393,7 +419,7 @@
         <div><div class="box-kopf"><span>PRO TAG</span><span class="leise">${zwei.map((p, i) => `<span class="punkt${i ? ' weiss' : ''}"></span>${esc(name(p))}`).join(' &nbsp; ')}</span></div>
           ${saeulen(v.tage.map((t) => ({ name: `${t.datum.getDate()}.${t.datum.getMonth() + 1}.`, w: t.werte.map((x) => (x > 0 ? x : 0)),
             tip: `${t.datum.getDate()}.${t.datum.getMonth() + 1}.: ` + zwei.map((p, i) => `${name(p)} ${t.werte[i] === null ? '–' : t.werte[i] === 0 ? 'rauchfrei' : t.werte[i] + '×'}`).join(', ') })), { labels: 10 })}</div>
-        <div><div class="box-kopf"><span>NACH WOCHENTAG</span><span class="leise">gesamt</span></div>
+        <div><div class="box-kopf"><span>NACH WOCHENTAG</span></div>
           ${saeulen(WT_KURZ.map((w, i) => ({ name: w, w: v.wochentage.map((x) => x[i]), tip: `${WT[(i + 1) % 7]}: ` + zwei.map((p, k) => `${name(p)} ${v.wochentage[k][i]}×`).join(', ') })))}</div>
       </div>`;
     $('#vgl-n').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; Z.vglTage = +b.dataset.n; zeichneVergleich(); };
