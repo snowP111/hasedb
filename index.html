@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -164,6 +164,7 @@
       <div class="nav-info"><b id="nav-rest">ROUTE</b><span id="nav-text"></span></div>
       <button class="knopf" id="nav-folgen">FOLGEN</button><button class="knopf" id="nav-ende">BEENDEN</button>
     </div>
+    <button class="standort-knopf" id="standort" title="Mein Standort" aria-label="Mein Standort"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3" stroke="currentColor" stroke-width="1.5"/></svg></button>
     <button class="kompass" id="kompass" title="Nach Norden ausrichten">
       <span class="kompass-n">N</span>
       <svg viewBox="0 0 40 40" id="kompass-nadel"><path d="M20 6 26 26 20 22 14 26Z" fill="#e8253b"/></svg>
@@ -177,7 +178,7 @@
         <div class="chips" id="f-kategorie"></div>
         <label class="beschr">NOTIZ</label>
         <textarea class="eingabe" id="f-notiz" rows="3"></textarea>
-        <label class="schalter"><input type="checkbox" id="f-geteilt"> <span>FÜR BEIDE SICHTBAR (GETEILT)</span></label>
+        <label class="schalter"><input type="checkbox" id="f-geteilt"> <span>FÜR ALLE SICHTBAR</span></label>
         <div class="knopfreihe">
           <button type="submit" class="knopf voll">SPEICHERN</button>
           <button type="button" class="knopf" id="f-abbrechen">ABBRECHEN</button>
@@ -214,10 +215,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="config.js?v=12"></script>
-<script src="logik.js?v=12"></script>
-<script src="graph.js?v=12"></script>
-<script src="karte.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="config.js?v=13"></script>
+<script src="logik.js?v=13"></script>
+<script src="graph.js?v=13"></script>
+<script src="karte.js?v=13"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>

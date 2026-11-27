@@ -136,6 +136,13 @@ section > .knopf { margin: 14px 16px 0; width: calc(100% - 32px); }
   border: 1px solid var(--line-strong); cursor: pointer; padding: 0;
 }
 .kompass::before { content: ""; position: absolute; inset: 10px; border: 1px solid var(--line); border-radius: 50%; }
+.standort-knopf { position: absolute; left: 132px; bottom: calc(24px + var(--safe-b)); z-index: 8; width: 48px; height: 48px; padding: 12px;
+  background: rgba(9, 9, 10, .8); border: 1px solid var(--line-strong); color: var(--muted); cursor: pointer; }
+.standort-knopf svg { width: 100%; height: 100%; display: block; }
+.standort-knopf.aktiv { color: var(--accent); border-color: var(--accent); }
+.standort-knopf.sucht svg { animation: standort-sucht 1s ease-in-out infinite alternate; }
+@keyframes standort-sucht { from { opacity: 1; } to { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .standort-knopf.sucht svg { animation: none; opacity: .5; } }
 .kompass-n { position: absolute; top: 4px; left: 0; right: 0; text-align: center; font-size: 12px; color: var(--text); }
 .kompass svg { position: absolute; inset: 18px; width: 60px; height: 60px; transition: transform .1s linear; }
 .meldung {
@@ -204,6 +211,7 @@ body.setzen .maplibregl-canvas { cursor: crosshair; }
   .kompass svg { inset: 10px; width: 36px; height: 36px; }
   .kompass-n { font-size: 9px; top: 1px; }
   .kompass::before { inset: 6px; }
+  .standort-knopf { left: auto; right: 10px; top: 76px; bottom: auto; width: 56px; height: 56px; padding: 14px; }
   .meldung { top: calc(66px + var(--safe-t)); width: calc(100% - 90px); left: 10px; transform: none; }
 }
 
@@ -340,6 +348,35 @@ h1, .headline { margin: 0; font-size: clamp(40px, 6vw, 64px); font-weight: 600; 
 .vgl-tabelle th { font-size: 10.5px; letter-spacing: .16em; color: var(--muted); font-weight: 500; }
 .vgl-tabelle td { font-family: var(--mono); }
 .vgl-tabelle td:first-child { font-family: var(--sans); }
+/* Rangliste: eine Zeile pro Person, Spaltenköpfe sortieren */
+.rangliste { table-layout: fixed; }
+.rangliste th:not(:first-child) { width: 18%; }
+.rangliste td { font-family: var(--sans); font-size: 15px; font-variant-numeric: tabular-nums; padding: 12px 8px; overflow-wrap: anywhere; }
+.rangliste td:first-child { padding-left: 0; }
+.rangliste td small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.rangliste tr.ich td:first-child { font-weight: 600; }
+.rangliste .platz { display: inline-block; width: 22px; color: var(--faint); font-size: 12px; }
+.rangliste td small { padding-left: 22px; }
+.rangliste th button { background: none; border: 0; padding: 8px 0; min-height: 36px; cursor: pointer; font: inherit; font-size: 10.5px; font-weight: 600; letter-spacing: .14em; color: var(--muted); border-bottom: 1px solid transparent; }
+.rangliste th button.aktiv { color: var(--text); border-bottom-color: var(--accent); }
+.vgl-mit { display: flex; align-items: center; gap: 12px; margin: 8px 0 24px; flex-wrap: wrap; }
+.vgl-mit .chips { margin: 0; }
+.vgl-mit .chips button { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+.beschr-inline { font-size: 11px; font-weight: 600; letter-spacing: .18em; color: var(--muted); }
+@media (max-width: 600px) {
+  .rangliste th button { letter-spacing: .04em; font-size: 9.5px; white-space: normal; hyphens: manual; line-height: 1.3; text-align: right; }
+  .rangliste th:not(:first-child) { width: 22%; }
+  .rangliste th { padding-left: 8px; padding-right: 0; }
+  .rangliste td:last-child, .rangliste th:last-child { padding-right: 0; }
+}
+@media (max-width: 380px) {
+  .rangliste td { padding: 12px 4px; font-size: 14px; }
+  .rangliste .platz { display: none; }
+  .rangliste td small { padding-left: 0; }
+  #tabelle th, #tabelle td { padding-left: 6px; padding-right: 6px; }
+  #tabelle th { letter-spacing: .02em; font-size: 9.5px; }
+  #tabelle td { font-size: 13px; }
+}
 .vgl-tabelle .besser { color: var(--accent); }
 .punkt { display: inline-block; width: 9px; height: 9px; margin-right: 8px; background: var(--accent); }
 .punkt.weiss { background: var(--text); }
