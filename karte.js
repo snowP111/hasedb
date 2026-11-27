@@ -264,7 +264,7 @@ window.Karte = (function () {
   $('#ort-bearbeiten').addEventListener('click', () => { const o = S.orte.find((x) => x.id === S.gewaehlt); if (o && eigen(o)) oeffneFenster(o); });
   $('#ort-loeschen').addEventListener('click', async () => {
     const o = S.orte.find((x) => x.id === S.gewaehlt); if (!o || !eigen(o)) return;
-    if (!confirm(`„${o.name}“ löschen?`)) return;
+    if (!(await X.frage(`„${o.name}“ löschen?`, 'Das lässt sich nicht rückgängig machen.'))) return;
     await loescheOrt(o); schliesseOrt();
   });
 
@@ -288,25 +288,24 @@ window.Karte = (function () {
   let fKat = 'sonstiges';
   function oeffneFenster(o, pos) {
     S.bearbeite = o || null; S.neuPos = pos || (o ? { lat: o.lat, lon: o.lon } : null);
-    $('#fenster-titel').textContent = o ? 'ORT BEARBEITEN' : 'ORT MARKIEREN';
+    $('#fenster-ort').label = o ? 'Ort bearbeiten' : 'Ort markieren';
     $('#f-name').value = o ? o.name : '';
     $('#f-notiz').value = o ? o.notiz || '' : '';
     $('#f-geteilt').checked = o ? !!o.geteilt : false;
     fKat = o ? o.kategorie : 'sonstiges';
     $('#f-kategorie').innerHTML = KAT.map((k) => `<button type="button" data-k="${k.id}" class="${k.id === fKat ? 'aktiv' : ''}">${ikon(k.id)}${k.name}</button>`).join('');
-    $('#fenster-ort').hidden = false;
-    setTimeout(() => $('#f-name').focus(), 30);
+    $('#fenster-ort').open = true;
   }
   $('#f-kategorie').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     fKat = b.dataset.k; $$('#f-kategorie button').forEach((x) => x.classList.toggle('aktiv', x === b));
   });
-  $('#f-abbrechen').addEventListener('click', () => { $('#fenster-ort').hidden = true; });
+  $('#fenster-ort').addEventListener('wa-after-show', () => $('#f-name').focus());
   $('#form-ort').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = $('#f-name').value.trim(); if (!name) return;
     const daten = { name, kategorie: fKat, notiz: $('#f-notiz').value.trim(), lat: S.neuPos.lat, lon: S.neuPos.lon, geteilt: $('#f-geteilt').checked };
-    $('#fenster-ort').hidden = true;
+    $('#fenster-ort').open = false;
     const o = S.bearbeite ? await aendereOrt(S.bearbeite, daten) : await neuerOrt(daten);
     if (o) waehle(o.id);
   });
@@ -589,7 +588,7 @@ window.Karte = (function () {
   // ------------------------------------------------------------------ Tasten
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || $('#ansicht-karte').hidden) return;
-    if (!$('#fenster-ort').hidden) { $('#fenster-ort').hidden = true; return; }
+    if ($('#fenster-ort').open || $('#bestaetigen').open) return;   // Dialog schließt sich selbst
     if (S.klickZiel || S.setzen) { S.klickZiel = null; setzenModus(false); $$('[data-klick]').forEach((x) => x.classList.remove('wartet')); document.body.classList.remove('setzen'); return; }
     if (S.gewaehlt) schliesseOrt();
   });

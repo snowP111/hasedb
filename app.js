@@ -24,10 +24,69 @@
   };
 
   let meldungT = 0;
+  /** Kurze Meldung unten/oben – als Popover im Top-Layer, damit sie auch über offenen Dialogen steht. */
   function meldung(t, ms) {
     const el = $('#meldung'); el.textContent = t; el.hidden = false;
-    clearTimeout(meldungT); meldungT = setTimeout(() => { el.hidden = true; }, ms || 2600);
+    try { if (el.showPopover && !el.matches(':popover-open')) el.showPopover(); } catch (e) { /* ältere Browser: normal anzeigen */ }
+    clearTimeout(meldungT);
+    meldungT = setTimeout(() => { el.hidden = true; try { if (el.hidePopover) el.hidePopover(); } catch (e) { /* egal */ } }, ms || 2600);
   }
+
+  // ------------------------------------------------------------------ Bibliotheken: Icons, Diagramme, Rückfrage
+  const IKON = { 'stroke-width': 1.5, width: 22, height: 22 };
+  const ikonen = (wurzel) => { if (window.lucide) window.lucide.createIcons({ attrs: IKON, root: wurzel }); };
+  ikonen();
+
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  if (window.Chart) {
+    const D = Chart.defaults;
+    D.font.family = css('--sans'); D.font.size = 11; D.color = css('--muted'); D.borderColor = css('--line');
+    D.plugins.legend.display = false;
+    Object.assign(D.plugins.tooltip, { backgroundColor: css('--surface-2'), borderColor: css('--line-strong'), borderWidth: 1, cornerRadius: 0, titleColor: css('--text'), bodyColor: css('--text'), padding: 10, displayColors: false, caretSize: 0 });
+    D.elements.bar.borderRadius = 0;
+    D.animation.duration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
+  }
+  const diagramme = new Map();
+  /** Säulendiagramm (Chart.js) in el. reihen: [{ daten:[…] }] – Reihe 0 rot (du), Reihe 1 weiß. tips(i) = Text beim Antippen. */
+  function saeulen(el, labels, reihen, tips, opts) {
+    opts = opts || {};
+    if (diagramme.has(el.id)) { diagramme.get(el.id).destroy(); diagramme.delete(el.id); }
+    if (!window.Chart) { el.innerHTML = '<p class="leise">Diagramm nicht geladen.</p>'; return; }
+    el.innerHTML = '<div class="diagramm"><canvas></canvas></div>';
+    const farben = [css('--accent'), css('--text')];
+    diagramme.set(el.id, new Chart(el.querySelector('canvas'), {
+      type: 'bar',
+      data: { labels, datasets: reihen.map((r, k) => ({ data: r.daten, backgroundColor: farben[k] || css('--muted'), hoverBackgroundColor: k ? '#fff' : css('--accent-hell'), barPercentage: reihen.length > 1 ? 0.9 : 0.72, categoryPercentage: 0.8 })) },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { grid: { display: false }, border: { color: css('--line') }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: opts.labels || 15 } },
+          y: { beginAtZero: true, border: { display: false }, grid: { color: css('--line') }, ticks: { precision: 0, maxTicksLimit: 4 } },
+        },
+        plugins: { tooltip: { filter: (c) => c.datasetIndex === 0, callbacks: { title: () => '', label: (c) => tips(c.dataIndex) } } },
+      },
+    }));
+  }
+
+  /** Rückfrage vor dem Löschen (Dialog statt confirm()). Liefert true bei „Löschen“. */
+  function frage(titel, text) {
+    const d = $('#bestaetigen');
+    d.label = titel; $('#bestaetigen-text').textContent = text || '';
+    return new Promise((fertig) => {
+      let antwort = false;
+      const ja = () => { antwort = true; d.open = false; };
+      const nein = () => { d.open = false; };
+      $('#bestaetigen-ja').onclick = ja; $('#bestaetigen-nein').onclick = nein;
+      d.addEventListener('wa-after-hide', function zu(e) { if (e.target !== d) return; d.removeEventListener('wa-after-hide', zu); fertig(antwort); });
+      d.open = true;
+    });
+  }
+
+  // Drawer: auf dem iPhone von unten, auf dem Mac von rechts
+  const schmal = matchMedia('(max-width: 820px)');
+  function drawerSeite() { for (const d of $$('wa-drawer')) d.placement = schmal.matches ? 'bottom' : 'end'; }
+  drawerSeite(); schmal.addEventListener('change', drawerSeite);
 
   // ------------------------------------------------------------------ Personen
   const ich = () => Z.user.id;
@@ -103,7 +162,7 @@
     $$('.ansicht').forEach((s) => { s.hidden = s.id !== 'ansicht-' + a; });
     $('main').scrollTop = 0;
     if (a === 'karte') {
-      if (!window.Karte.gestartet()) window.Karte.start({ sb, user: Z.user, name, gruppeVon, meldung });
+      if (!window.Karte.gestartet()) window.Karte.start({ sb, user: Z.user, name, gruppeVon, meldung, frage });
       window.Karte.zeigen();
     }
     zeichne();
@@ -118,24 +177,6 @@
   const kz = (titel, wert, unter, rot) => `<div class="kennzahl${rot ? ' rot' : ''}"><div class="k-titel">${esc(titel)}</div><div class="k-wert">${esc(wert)}</div><div class="k-unter">${esc(unter || '')}</div></div>`;
   function reviewKuerzel(h) {
     return h.reviews.map((r) => `<span class="kuerzel${r.user_id === ich() ? ' ich' : ''}" title="${esc(name(r.user_id))}">${esc(kuerzel(r.user_id))}</span>`).join('') || '<span class="leise">–</span>';
-  }
-  /** Säulen als SVG. werte: [{ name, w:[…], tip }], Serie 0 rot, Serie 1 weiß */
-  function saeulen(werte, opts) {
-    opts = opts || {};
-    const W = 600, H = 190, unten = 22, oben = 14, n = Math.max(1, werte.length), serien = Math.max(1, ...werte.map((x) => x.w.length));
-    const max = Math.max(1, ...werte.flatMap((x) => x.w.map((v) => v || 0)));
-    const breite = W / n, innen = breite * 0.72, b = innen / serien;
-    const jede = Math.ceil(n / (opts.labels || 15));
-    let s = `<svg class="diagramm" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img">`;
-    s += `<line class="achse" x1="0" x2="${W}" y1="${H - unten}" y2="${H - unten}"/><text x="0" y="10">${max}</text>`;
-    werte.forEach((x, i) => {
-      x.w.forEach((v, k) => {
-        const hh = (H - unten - oben) * (v || 0) / max, xx = i * breite + (breite - innen) / 2 + k * b;
-        s += `<rect class="${v == null ? 'b0' : k ? 'b2' : 'b'}" x="${xx.toFixed(1)}" y="${(H - unten - Math.max(hh, v == null ? 0 : 1.5)).toFixed(1)}" width="${Math.max(1, b - 1).toFixed(1)}" height="${Math.max(hh, v == null ? 0 : 1.5).toFixed(1)}"><title>${esc(x.tip || x.name + ': ' + x.w.join(' / '))}</title></rect>`;
-      });
-      if (i % jede === 0) s += `<text x="${(i * breite + breite / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${esc(x.name)}</text>`;
-    });
-    return s + '</svg>';
   }
   function balken(werte, fmt, weiss) {
     const max = Math.max(1e-9, ...werte.map((x) => x.wert));
@@ -205,7 +246,7 @@
   $('#such-name').addEventListener('input', zeichneSorten);
   $('#f-thc-min').addEventListener('input', zeichneSorten);
   $('#f-thc-max').addEventListener('input', zeichneSorten);
-  $('#filter-auf').addEventListener('click', () => { $('#filterfeld').hidden = !$('#filterfeld').hidden; });
+  $('#filter-auf').addEventListener('click', () => { $('#filterfeld').open = true; });
   $('#f-terpene').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-t]'); if (!b) return;
     const t = b.dataset.t, l = Z.filter.terpene;
@@ -213,17 +254,16 @@
     zeichneSorten();
   });
   for (const [id, feld] of [['#f-bestrahlt', 'bestrahlt'], ['#f-review', 'mitReview']]) {
-    $(id).addEventListener('click', (e) => {
-      const b = e.target.closest('button'); if (!b) return;
-      $$(id + ' button').forEach((x) => x.classList.toggle('aktiv', x === b));
-      Z.filter[feld] = b.dataset.w === '' ? null : b.dataset.w === 'ja';
+    $(id).addEventListener('change', (e) => {
+      const w = e.target.closest('wa-radio-group').value;
+      Z.filter[feld] = !w ? null : w === 'ja';
       zeichneSorten();
     });
   }
   $('#filter-reset').addEventListener('click', () => {
     Z.filter = { name: '', thcMin: null, thcMax: null, terpene: [], bestrahlt: null, mitReview: null };
     for (const id of ['#such-name', '#f-thc-min', '#f-thc-max']) $(id).value = '';
-    for (const id of ['#f-bestrahlt', '#f-review']) $$(id + ' button').forEach((x, i) => x.classList.toggle('aktiv', i === 0));
+    for (const id of ['#f-bestrahlt', '#f-review']) $(id).value = '';
     zeichneSorten();
   });
   $$('#tabelle th[data-sort]').forEach((th) => th.addEventListener('click', () => {
@@ -233,10 +273,9 @@
   $('#sorte-neu').addEventListener('click', () => formular(null));
 
   // ------------------------------------------------------------------ Blatt: Details, Formular
-  function blatt(html) { $('#blatt-inhalt').innerHTML = html; $('#blatt').hidden = false; }
-  function blattZu() { $('#blatt').hidden = true; $('#blatt-inhalt').innerHTML = ''; }
-  $('#blatt').addEventListener('click', (e) => { if (e.target.id === 'blatt') blattZu(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#blatt').hidden) blattZu(); });
+  function blatt(titel, html) { const d = $('#blatt'); d.label = titel; $('#blatt-inhalt').innerHTML = html; ikonen($('#blatt-inhalt')); d.open = true; }
+  function blattZu() { $('#blatt').open = false; }
+  $('#blatt').addEventListener('wa-after-hide', (e) => { if (e.target.id === 'blatt') $('#blatt-inhalt').innerHTML = ''; });
 
   function details(h) {
     if (!h) return;
@@ -246,21 +285,19 @@
         <div class="review-wer"><span>${esc(name(p)).toUpperCase()}</span>${meins ? `<button class="verlinkt" data-aktion="review">${r ? 'BEARBEITEN' : 'SCHREIBEN'}</button>` : ''}</div>
         <div class="review-text${r ? '' : ' leer'}">${r ? esc(r.text) : 'Noch kein Review.'}</div></div>`;
     }).join('');
-    blatt(`<div class="fenster-kopf">${esc(h.name)}</div>
-      <div class="detail-werte"><div><span>THC</span><b>${zahl(h.thc, 2)} %</b></div><div><span>BESTRAHLT</span><b>${h.bestrahlt ? 'Ja' : 'Nein'}</b></div></div>
+    blatt(h.name, `<div class="detail-werte"><div><span>THC</span><b>${zahl(h.thc, 2)} %</b></div><div><span>BESTRAHLT</span><b>${h.bestrahlt ? 'Ja' : 'Nein'}</b></div></div>
       <label class="beschr">TERPENE</label>
       <div class="detail-terp">${L.terpenListe(h.terpene).map((t) => `<span class="etikett">${esc(t)}</span>`).join('') || '<span class="leise">–</span>'}</div>
       <div class="detail-orig">Originaleingabe: ${esc(h.terpene)}</div>
       <label class="beschr">REVIEWS</label>${reviews}
-      <div class="knopfreihe" style="margin:16px 16px 0"><button class="knopf" data-aktion="bearbeiten">BEARBEITEN</button><button class="knopf gefahr" data-aktion="loeschen">LÖSCHEN</button><button class="knopf" data-aktion="zu">SCHLIESSEN</button></div>`);
+      <div class="knopfreihe"><button class="knopf" data-aktion="bearbeiten">BEARBEITEN</button><button class="knopf gefahr" data-aktion="loeschen">LÖSCHEN</button></div>`);
     const inhalt = $('#blatt-inhalt');
     inhalt.onclick = async (e) => {
       const a = e.target.closest('[data-aktion]'); if (!a) return;
       const art = a.dataset.aktion;
-      if (art === 'zu') blattZu();
       if (art === 'bearbeiten') formular(h);
       if (art === 'loeschen') {
-        if (!confirm(`„${h.name}“ wirklich löschen? Das kann nicht rückgängig gemacht werden – auch alle Reviews dazu werden gelöscht.`)) return;
+        if (!(await frage(`„${h.name}“ löschen?`, 'Auch alle Reviews dazu werden gelöscht. Das lässt sich nicht rückgängig machen.'))) return;
         const { error } = await sb.from('hases').delete().eq('id', h.id);
         if (error) { meldung('Löschen fehlgeschlagen: ' + error.message, 5000); return; }
         blattZu(); meldung('Gelöscht'); neuZeichnen();
@@ -284,26 +321,23 @@
 
   function formular(h) {
     const neu = !h, meinReview = '';
-    blatt(`<form id="hase-form"><div class="fenster-kopf">${neu ? 'NEUER EINTRAG' : 'EINTRAG BEARBEITEN'}</div>
+    blatt(neu ? 'Neuer Eintrag' : 'Eintrag bearbeiten', `<form id="hase-form">
       <label class="beschr">NAME</label><input class="eingabe" name="name" placeholder="z. B. Lava Cake" value="${neu ? '' : esc(h.name)}" autocomplete="off">
       <div class="zwei-felder"><div><label class="beschr">THC (%)</label><input class="eingabe" name="thc" inputmode="decimal" placeholder="z. B. 24,5" value="${neu ? '' : zahl(h.thc, 2).replace(/,?0+$/, '')}"></div>
-      <div><label class="beschr">BESTRAHLT</label><div class="segment" id="form-bestrahlt"><button type="button" data-w="nein" class="${neu || !h.bestrahlt ? 'aktiv' : ''}">NEIN</button><button type="button" data-w="ja" class="${!neu && h.bestrahlt ? 'aktiv' : ''}">JA</button></div></div></div>
+      <div><wa-radio-group id="form-bestrahlt" label="Bestrahlt" orientation="horizontal" value="${!neu && h.bestrahlt ? 'ja' : 'nein'}"><wa-radio appearance="button" value="nein">Nein</wa-radio><wa-radio appearance="button" value="ja">Ja</wa-radio></wa-radio-group></div></div>
       <label class="beschr">TERPENE</label><input class="eingabe" name="terpene" placeholder="durch Komma getrennt, z. B. Myrcen, Limonen" value="${neu ? '' : esc(h.terpene)}" autocomplete="off">
       ${neu ? `<label class="beschr">DEIN REVIEW (OPTIONAL)</label><textarea class="eingabe" name="review" rows="3" placeholder="Wie war's?">${meinReview}</textarea>` : ''}
       <p class="fehler" id="form-fehler"></p>
-      <div class="knopfreihe" style="margin:8px 16px 0"><button class="knopf voll" type="submit">${neu ? 'HINZUFÜGEN' : 'SPEICHERN'}</button><button class="knopf" type="button" id="form-abbrechen">ABBRECHEN</button></div></form>`);
+      <div class="knopfreihe"><button class="knopf voll" type="submit">${neu ? 'HINZUFÜGEN' : 'SPEICHERN'}</button>${neu ? '' : '<button class="knopf" type="button" id="form-abbrechen">ABBRECHEN</button>'}</div></form>`);
     const form = $('#hase-form');
-    let bestrahlt = !neu && h.bestrahlt;
-    $('#form-bestrahlt').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; bestrahlt = b.dataset.w === 'ja'; $$('#form-bestrahlt button').forEach((x) => x.classList.toggle('aktiv', x === b)); };
-    $('#form-abbrechen').onclick = () => (neu ? blattZu() : details(h));
-    setTimeout(() => form.name.focus(), 30);
+    if (!neu) $('#form-abbrechen').onclick = () => details(h);
     form.onsubmit = async (e) => {
       e.preventDefault();
       const nameT = form.name.value.trim(), thcT = form.thc.value.trim().replace(',', '.'), terp = form.terpene.value.trim();
       if (!nameT || !thcT || !terp) { $('#form-fehler').textContent = 'Bitte fülle Name, THC und Terpene aus.'; return; }
       const thc = Number(thcT);
       if (!Number.isFinite(thc) || thc < 0 || thc > 100) { $('#form-fehler').textContent = 'Bitte gib einen THC-Wert zwischen 0 und 100 ein.'; form.thc.focus(); return; }
-      const zeileH = { name: nameT, thc, terpene: terp, bestrahlt };
+      const zeileH = { name: nameT, thc, terpene: terp, bestrahlt: $('#form-bestrahlt').value === 'ja' };
       if (neu) {
         const { data, error } = await sb.from('hases').insert(zeileH).select('id').single();
         if (error) { $('#form-fehler').textContent = 'Die Datenbank meldet: ' + error.message; return; }
@@ -327,7 +361,8 @@
       kz('THC-SPANNE', s.leer ? '–' : `${zahl(s.min)} – ${zahl(s.max)}`, 'Prozent THC') +
       kz('VERSCHIEDENE TERPENE', s.terpene.length, s.terpene.length ? 'am häufigsten: ' + s.terpene[0].name : '');
     const v = L.thcVerteilung(Z.hases, 2);
-    $('#stat-verteilung').innerHTML = v.length ? saeulen(v.map((x) => ({ name: x.name, w: [x.wert], tip: `${x.name} % THC: ${x.wert} ${x.wert === 1 ? 'Eintrag' : 'Einträge'}` }))) : '<p class="leise">Noch keine Daten.</p>';
+    if (v.length) saeulen($('#stat-verteilung'), v.map((x) => x.name), [{ daten: v.map((x) => x.wert) }], (i) => `${v[i].name} % THC: ${v[i].wert} ${v[i].wert === 1 ? 'Eintrag' : 'Einträge'}`);
+    else $('#stat-verteilung').innerHTML = '<p class="leise">Noch keine Daten.</p>';
     $('#stat-terpene').innerHTML = balken(s.terpene.slice(0, 7).map((t) => ({ name: t.name, wert: t.wert, tip: `${t.name}: in ${t.wert} Einträgen` })));
     const ges = Math.max(1, s.anzahl);
     $('#stat-bestrahlung').innerHTML = balken([
@@ -384,11 +419,11 @@
       <div class="stepper"><button class="knopf" data-ed="minus" ${a > 0 ? '' : 'disabled'}>−</button><span class="zaehler">${a === undefined ? '–' : a}</span><button class="knopf" data-ed="plus">+</button></div>
       <div class="editor-knoepfe"><button class="knopf" data-ed="frei" ${a === 0 ? 'disabled' : ''}>RAUCHFREI ✓</button><button class="knopf gefahr" data-ed="weg" ${a === undefined ? 'disabled' : ''}>EINTRAG ENTFERNEN</button></div>`;
     // Diagramme
-    $('#smoke-30').innerHTML = saeulen(r.letzteTage(30).map((t) => ({
-      name: `${t.datum.getDate()}.${t.datum.getMonth() + 1}.`, w: [t.anzahl > 0 ? t.anzahl : 0],
-      tip: `${WT[t.datum.getDay()].slice(0, 2)} ${t.datum.getDate()}.${t.datum.getMonth() + 1}.: ${t.anzahl === null ? 'nicht eingetragen' : t.anzahl === 0 ? 'rauchfrei' : t.anzahl + '× geraucht'}`,
-    })), { labels: 10 });
-    $('#smoke-woche').innerHTML = saeulen(r.proWochentag().map((v, i) => ({ name: WT_KURZ[i], w: [v], tip: `${WT[(i + 1) % 7]}: ${v}× geraucht` })));
+    const t30 = r.letzteTage(30), tag = (t) => `${t.datum.getDate()}.${t.datum.getMonth() + 1}.`;
+    saeulen($('#smoke-30'), t30.map(tag), [{ daten: t30.map((t) => (t.anzahl > 0 ? t.anzahl : 0)) }],
+      (i) => { const t = t30[i]; return `${WT[t.datum.getDay()].slice(0, 2)} ${tag(t)}: ${t.anzahl === null ? 'nicht eingetragen' : t.anzahl === 0 ? 'rauchfrei' : t.anzahl + '× geraucht'}`; }, { labels: 6 });
+    const pw = r.proWochentag();
+    saeulen($('#smoke-woche'), WT_KURZ, [{ daten: pw }], (i) => `${WT[(i + 1) % 7]}: ${pw[i]}× geraucht`);
     zeichneVergleich();
   }
   $('#kalender').addEventListener('click', (e) => { const b = e.target.closest('[data-tag]'); if (!b || b.disabled) return; Z.tag = b.dataset.tag; zeichneSmoke(); });
@@ -420,19 +455,22 @@
     const andere = ps.filter((p) => p !== ich());
     if (!andere.includes(Z.vglMit)) Z.vglMit = andere[0];
     const zwei = [ich(), Z.vglMit], idx = zwei.map((p) => ps.indexOf(p));
-    el.innerHTML = `<div class="box-kopf"><span>VERGLEICH</span><div class="segment" id="vgl-n">${[7, 30, 90].map((x) => `<button data-n="${x}" class="${x === n ? 'aktiv' : ''}">${x} TAGE</button>`).join('')}</div></div>
+    el.innerHTML = `<div class="box-kopf"><span>VERGLEICH</span><wa-radio-group id="vgl-n" label="Zeitraum" orientation="horizontal" value="${n}">${[7, 30, 90].map((x) => `<wa-radio appearance="button" value="${x}">${x} Tage</wa-radio>`).join('')}</wa-radio-group></div>
       <table class="vgl-tabelle rangliste"><thead><tr><th></th>${SP.map((s) => `<th><button data-vs="${s.k}" class="${s === sp ? 'aktiv' : ''}">${s.t}</button></th>`).join('')}</tr></thead><tbody>
       ${reihe.map((i, platz) => `<tr class="${ps[i] === ich() ? 'ich' : ''}"><td><span class="platz">${platz + 1}</span>${esc(name(ps[i]))}<small>${v.eingetragen[i]} / ${n} eingetragen</small></td>${SP.map((s, k) => `<td class="${bester[k][i] ? 'besser' : ''}">${s.f(s.w[i])}</td>`).join('')}</tr>`).join('')}
       </tbody></table>
       <div class="vgl-mit"><span class="beschr-inline">DU UND</span><div class="chips" id="vgl-mit">${andere.map((p) => `<button data-p="${esc(p)}" class="${p === Z.vglMit ? 'aktiv' : ''}">${esc(name(p))}</button>`).join('')}</div></div>
       <div class="raster zwei breit-links" style="margin-top:0">
-        <div><div class="box-kopf"><span>PRO TAG</span><span class="leise">${zwei.map((p, i) => `<span class="punkt${i ? ' weiss' : ''}"></span>${esc(name(p))}`).join(' &nbsp; ')}</span></div>
-          ${saeulen(v.tage.map((t) => ({ name: `${t.datum.getDate()}.${t.datum.getMonth() + 1}.`, w: idx.map((j) => (t.werte[j] > 0 ? t.werte[j] : 0)),
-            tip: `${t.datum.getDate()}.${t.datum.getMonth() + 1}.: ` + zwei.map((p, k) => `${name(p)} ${t.werte[idx[k]] === null ? '–' : t.werte[idx[k]] === 0 ? 'rauchfrei' : t.werte[idx[k]] + '×'}`).join(', ') })), { labels: 10 })}</div>
-        <div><div class="box-kopf"><span>NACH WOCHENTAG</span></div>
-          ${saeulen(WT_KURZ.map((w, i) => ({ name: w, w: idx.map((j) => v.wochentage[j][i]), tip: `${WT[(i + 1) % 7]}: ` + zwei.map((p, k) => `${name(p)} ${v.wochentage[idx[k]][i]}×`).join(', ') })))}</div>
+        <div><div class="box-kopf"><span>PRO TAG</span><span class="leise">${zwei.map((p, i) => `<span class="punkt${i ? ' weiss' : ''}"></span>${esc(name(p))}`).join(' &nbsp; ')}</span></div><div id="vgl-tag"></div></div>
+        <div><div class="box-kopf"><span>NACH WOCHENTAG</span></div><div id="vgl-woche"></div></div>
       </div>`;
-    $('#vgl-n').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; Z.vglTage = +b.dataset.n; zeichneVergleich(); };
+    const wert = (t) => (t === null ? '–' : t === 0 ? 'rauchfrei' : t + '×');
+    const tg = (t) => `${t.datum.getDate()}.${t.datum.getMonth() + 1}.`;
+    saeulen($('#vgl-tag'), v.tage.map(tg), idx.map((j) => ({ daten: v.tage.map((t) => (t.werte[j] > 0 ? t.werte[j] : 0)) })),
+      (i) => `${tg(v.tage[i])}: ` + zwei.map((p, k) => `${name(p)} ${wert(v.tage[i].werte[idx[k]])}`).join(', '), { labels: 6 });
+    saeulen($('#vgl-woche'), WT_KURZ, idx.map((j) => ({ daten: v.wochentage[j] })),
+      (i) => `${WT[(i + 1) % 7]}: ` + zwei.map((p, k) => `${name(p)} ${v.wochentage[idx[k]][i]}×`).join(', '));
+    $('#vgl-n').addEventListener('change', (e) => { Z.vglTage = +e.target.closest('wa-radio-group').value; zeichneVergleich(); });
     el.querySelector('thead').onclick = (e) => { const b = e.target.closest('[data-vs]'); if (!b) return; Z.vglSort = b.dataset.vs; zeichneVergleich(); };
     $('#vgl-mit').onclick = (e) => { const b = e.target.closest('[data-p]'); if (!b) return; Z.vglMit = b.dataset.p; zeichneVergleich(); };
   }
@@ -456,10 +494,10 @@
   $('#knopf-daten').addEventListener('click', () => { if (!window.Karte.gestartet()) meldung('Öffne zuerst einmal die Karte'); });
 
   function fragNachName() {
-    blatt(`<form id="name-form"><div class="fenster-kopf">WIE HEISST DU?</div>
-      <p class="hinweis">Dein Name erscheint bei deinen Reviews, im Smoke-Vergleich und bei deinen Orten. Ändern kannst du ihn im Profil.</p>
+    blatt('Wie heißt du?', `<form id="name-form">
+      <p class="hinweis">Erscheint bei Reviews, im Vergleich und bei deinen Orten.</p>
       <label class="beschr">NAME</label><input class="eingabe" name="n" maxlength="40" value="${esc(name(ich()))}" autocomplete="off">
-      <div class="knopfreihe" style="margin:16px 16px 0"><button class="knopf voll" type="submit">SPEICHERN</button></div></form>`);
+      <div class="knopfreihe"><button class="knopf voll" type="submit">SPEICHERN</button></div></form>`);
     $('#name-form').onsubmit = async (e) => { e.preventDefault(); if (await nameSpeichern(e.target.n.value)) { blattZu(); zeichne(); } };
   }
 
