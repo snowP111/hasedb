@@ -398,6 +398,10 @@ h1, .headline { margin: 0; font-size: clamp(40px, 6vw, 64px); font-weight: 600; 
   .tabelle td, .tabelle th { padding: 10px 6px; }
   .filter-zeile > .beschr { width: 100%; }
   .serie-zahl { font-size: 56px; }
+  /* Smoke auf der Übersicht: Hauptknopf oben über die ganze Breite, +1 / −1 darunter nebeneinander */
+  #start-smoke .leiste { flex-wrap: wrap; }
+  #start-smoke .leiste .knopf.voll { flex: 1 1 100%; }
+  #start-smoke .leiste .knopf:not(.voll) { flex: 1 1 0; }
   .kal-tag { aspect-ratio: 1; padding: 3px 4px; font-size: 11px; }
   .kal-tag .anz { font-size: 11px; }
   .kalender { gap: 3px; }
