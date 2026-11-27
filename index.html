@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" class="wa-dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -15,7 +15,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
-<link rel="stylesheet" href="style.css?v=13">
+<!-- Web Awesome (Dialog, Drawer, Schalter, Auswahl): nur Theme + Loader, lokal in vendor/ -->
+<link rel="stylesheet" href="vendor/webawesome/styles/themes/default.css">
+<script type="module" src="vendor/webawesome/webawesome.loader.js" data-webawesome="vendor/webawesome/"></script>
+<link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 
@@ -37,12 +40,13 @@
 <header class="kopf">
   <div class="marke">Hase<span>DB</span></div>
   <nav class="reiter" id="reiter">
-    <button data-ansicht="start" class="aktiv">Start</button>
-    <button data-ansicht="sorten">Sorten</button>
-    <button data-ansicht="smoke">Smoke</button>
-    <button data-ansicht="karte">Karte</button>
+    <button data-ansicht="start" class="aktiv"><i data-lucide="house"></i><span>Start</span></button>
+    <button data-ansicht="sorten"><i data-lucide="leaf"></i><span>Sorten</span></button>
+    <button data-ansicht="smoke"><i data-lucide="cigarette"></i><span>Smoke</span></button>
+    <button data-ansicht="karte"><i data-lucide="map"></i><span>Karte</span></button>
   </nav>
   <button class="profil-knopf" id="profil-knopf" data-geh="einstellungen" aria-label="Profil"></button>
+  <wa-tooltip for="profil-knopf" class="nur-mac">Profil</wa-tooltip>
 </header>
 
 <main>
@@ -64,21 +68,8 @@
   <section class="ansicht" id="ansicht-sorten" hidden>
     <div class="seitenkopf"><h1>Sorten</h1><button class="knopf voll" id="sorte-neu">+ NEU</button></div>
     <div class="leiste">
-      <input class="eingabe" id="such-name" placeholder="Name suchen …" autocomplete="off">
-      <button class="knopf" id="filter-auf">FILTER</button>
-    </div>
-    <div class="filterfeld" id="filterfeld" hidden>
-      <div class="filter-zeile">
-        <span class="beschr">THC</span>
-        <input class="eingabe kurz" id="f-thc-min" inputmode="decimal" placeholder="von">
-        <span class="leise">–</span>
-        <input class="eingabe kurz" id="f-thc-max" inputmode="decimal" placeholder="bis">
-        <span class="leise">%</span>
-      </div>
-      <div class="filter-zeile"><span class="beschr">BESTRAHLT</span><div class="segment" id="f-bestrahlt"><button data-w="" class="aktiv">ALLE</button><button data-w="ja">JA</button><button data-w="nein">NEIN</button></div></div>
-      <div class="filter-zeile"><span class="beschr">REVIEW</span><div class="segment" id="f-review"><button data-w="" class="aktiv">ALLE</button><button data-w="ja">MIT</button><button data-w="nein">OHNE</button></div></div>
-      <div class="filter-zeile oben"><span class="beschr">TERPENE</span><div class="chips" id="f-terpene"></div></div>
-      <div class="filter-zeile"><span class="beschr"></span><button class="knopf" id="filter-reset">ZURÜCKSETZEN</button></div>
+      <input class="eingabe" id="such-name" type="search" placeholder="Name suchen …" autocomplete="off">
+      <button class="knopf mit-ikon" id="filter-auf"><i data-lucide="sliders-horizontal"></i><span>FILTER</span></button>
     </div>
     <div class="treffer leise" id="treffer"></div>
     <table class="tabelle" id="tabelle">
@@ -92,7 +83,7 @@
 
   <!-- Statistik -->
   <section class="ansicht" id="ansicht-statistik" hidden>
-    <div class="seitenkopf"><div><button class="zurueck" data-geh="start">← Übersicht</button><h1>Statistik</h1></div></div>
+    <div class="seitenkopf"><div><button class="zurueck" data-geh="start"><i data-lucide="arrow-left"></i>Übersicht</button><h1>Statistik</h1></div></div>
     <div class="kennzahlen" id="stat-kennzahlen"></div>
     <div class="raster zwei">
       <div class="karte-box"><div class="box-kopf"><span>THC-VERTEILUNG (%)</span></div><div id="stat-verteilung"></div></div>
@@ -108,7 +99,7 @@
     <div class="kennzahlen" id="smoke-kennzahlen"></div>
     <div class="raster kalender-raster">
       <div class="karte-box">
-        <div class="box-kopf"><button class="klein" id="kal-zurueck">‹</button><span id="kal-titel"></span><button class="klein" id="kal-vor">›</button></div>
+        <div class="box-kopf"><button class="klein" id="kal-zurueck" aria-label="Voriger Monat"><i data-lucide="chevron-left"></i></button><span id="kal-titel"></span><button class="klein" id="kal-vor" aria-label="Nächster Monat"><i data-lucide="chevron-right"></i></button></div>
         <div class="kalender" id="kalender"></div>
       </div>
       <div class="karte-box" id="tag-editor"></div>
@@ -150,7 +141,7 @@
       </section>
     </aside>
     <aside class="feld rechts" id="feld-ort" hidden>
-      <div class="ort-kopf"><span id="ort-name"></span><button class="klein" id="ort-zu" aria-label="Schließen">✕</button></div>
+      <div class="ort-kopf"><span id="ort-name"></span><button class="klein" id="ort-zu" aria-label="Schließen"><i data-lucide="x"></i></button></div>
       <div class="ort-wer" id="ort-wer"></div>
       <div class="ort-art" id="ort-art"></div>
       <p class="ort-notiz" id="ort-notiz"></p>
@@ -164,27 +155,26 @@
       <div class="nav-info"><b id="nav-rest">ROUTE</b><span id="nav-text"></span></div>
       <button class="knopf" id="nav-folgen">FOLGEN</button><button class="knopf" id="nav-ende">BEENDEN</button>
     </div>
-    <button class="standort-knopf" id="standort" title="Mein Standort" aria-label="Mein Standort"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3" stroke="currentColor" stroke-width="1.5"/></svg></button>
+    <button class="standort-knopf" id="standort" aria-label="Mein Standort"><i data-lucide="locate" class="aus"></i><i data-lucide="locate-fixed" class="an"></i></button>
+    <wa-tooltip for="standort" class="nur-mac" placement="right">Mein Standort</wa-tooltip>
     <button class="kompass" id="kompass" title="Nach Norden ausrichten">
       <span class="kompass-n">N</span>
       <svg viewBox="0 0 40 40" id="kompass-nadel"><path d="M20 6 26 26 20 22 14 26Z" fill="#e8253b"/></svg>
     </button>
-    <div class="schleier" id="fenster-ort" hidden>
-      <form class="fenster" id="form-ort">
-        <div class="fenster-kopf"><span id="fenster-titel">ORT MARKIEREN</span></div>
-        <label class="beschr">NAME</label>
+    <wa-dialog id="fenster-ort" label="Ort markieren">
+      <form id="form-ort">
+        <label class="beschr" for="f-name">NAME</label>
         <input class="eingabe" id="f-name" maxlength="120" required autocomplete="off">
         <label class="beschr">KATEGORIE</label>
         <div class="chips" id="f-kategorie"></div>
-        <label class="beschr">NOTIZ</label>
+        <label class="beschr" for="f-notiz">NOTIZ</label>
         <textarea class="eingabe" id="f-notiz" rows="3"></textarea>
-        <label class="schalter"><input type="checkbox" id="f-geteilt"> <span>FÜR ALLE SICHTBAR</span></label>
+        <wa-switch id="f-geteilt">Für alle sichtbar</wa-switch>
         <div class="knopfreihe">
           <button type="submit" class="knopf voll">SPEICHERN</button>
-          <button type="button" class="knopf" id="f-abbrechen">ABBRECHEN</button>
         </div>
       </form>
-    </div>
+    </wa-dialog>
   </section>
 
   <!-- Einstellungen -->
@@ -200,7 +190,7 @@
       </div>
       <div class="karte-box">
         <div class="box-kopf"><span>KARTE</span></div>
-        <label class="schalter"><input type="checkbox" id="opt-3d" checked> <span>3D-GEBÄUDE</span></label>
+        <wa-switch id="opt-3d" checked>3D-Gebäude</wa-switch>
         <button class="knopf" id="knopf-daten">STRASSENDATEN NEU LADEN</button>
         <p class="hinweis" id="daten-info"></p>
       </div>
@@ -209,16 +199,48 @@
 </main>
 </div>
 
-<!-- Blatt (Details, Formulare) -->
-<div class="schleier" id="blatt" hidden><div class="fenster gross" id="blatt-inhalt"></div></div>
-<div class="meldung" id="meldung" hidden></div>
+<!-- Blatt (Details, Formulare): von unten auf dem iPhone, von rechts auf dem Mac -->
+<wa-drawer id="blatt" label="" light-dismiss><div id="blatt-inhalt"></div></wa-drawer>
+
+<!-- Filter der Sortenliste -->
+<wa-drawer id="filterfeld" label="Filter" light-dismiss>
+  <label class="beschr">THC (%)</label>
+  <div class="von-bis">
+    <input class="eingabe" id="f-thc-min" inputmode="decimal" placeholder="von" aria-label="THC von">
+    <span class="leise">–</span>
+    <input class="eingabe" id="f-thc-max" inputmode="decimal" placeholder="bis" aria-label="THC bis">
+  </div>
+  <wa-radio-group id="f-bestrahlt" label="Bestrahlt" orientation="horizontal" value="">
+    <wa-radio appearance="button" value="">Alle</wa-radio><wa-radio appearance="button" value="ja">Ja</wa-radio><wa-radio appearance="button" value="nein">Nein</wa-radio>
+  </wa-radio-group>
+  <wa-radio-group id="f-review" label="Review" orientation="horizontal" value="">
+    <wa-radio appearance="button" value="">Alle</wa-radio><wa-radio appearance="button" value="ja">Mit</wa-radio><wa-radio appearance="button" value="nein">Ohne</wa-radio>
+  </wa-radio-group>
+  <label class="beschr">TERPENE</label>
+  <div class="chips" id="f-terpene"></div>
+  <div class="knopfreihe" slot="footer">
+    <button class="knopf" id="filter-reset">ZURÜCKSETZEN</button>
+  </div>
+</wa-drawer>
+
+<!-- Rückfrage vor dem Löschen -->
+<wa-dialog id="bestaetigen" label="Löschen?">
+  <p id="bestaetigen-text"></p>
+  <div class="knopfreihe" slot="footer">
+    <button class="knopf" id="bestaetigen-nein">ABBRECHEN</button>
+    <button class="knopf voll" id="bestaetigen-ja">LÖSCHEN</button>
+  </div>
+</wa-dialog>
+<div class="meldung" id="meldung" popover="manual" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="config.js?v=13"></script>
-<script src="logik.js?v=13"></script>
-<script src="graph.js?v=13"></script>
-<script src="karte.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="vendor/chartjs/chart.umd.min.js"></script>
+<script src="vendor/lucide/lucide-auswahl.js"></script>
+<script src="config.js?v=14"></script>
+<script src="logik.js?v=14"></script>
+<script src="graph.js?v=14"></script>
+<script src="karte.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>
