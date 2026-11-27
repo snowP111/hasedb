@@ -18,7 +18,7 @@
 <!-- Web Awesome (Dialog, Drawer, Schalter, Auswahl): nur Theme + Loader, lokal in vendor/ -->
 <link rel="stylesheet" href="vendor/webawesome/styles/themes/default.css">
 <script type="module" src="vendor/webawesome/webawesome.loader.js" data-webawesome="vendor/webawesome/"></script>
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
@@ -52,15 +52,11 @@
 <main>
   <!-- Übersicht -->
   <section class="ansicht" id="ansicht-start">
-    <div class="seitenkopf"><div><div class="label" id="start-datum"></div><h1>Übersicht</h1></div></div>
-    <div class="kennzahlen" id="start-kennzahlen"></div>
-    <button class="textlink" data-geh="statistik">Statistik</button>
-    <div class="raster zwei">
-      <div class="karte-box" id="start-smoke"></div>
-      <div class="karte-box">
-        <div class="box-kopf"><span>ZULETZT HINZUGEFÜGT</span></div>
-        <div id="start-zuletzt"></div>
-      </div>
+    <div class="start">
+      <!-- Smoke: die Hauptsache des Tages -->
+      <div class="start-smoke" id="start-smoke"></div>
+      <!-- Sorten und Statistik: ruhig daneben (Mac) bzw. darunter (iPhone) -->
+      <div class="start-sorten" id="start-sorten"></div>
     </div>
   </section>
 
@@ -237,10 +233,10 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="vendor/chartjs/chart.umd.min.js"></script>
 <script src="vendor/lucide/lucide-auswahl.js"></script>
-<script src="config.js?v=14"></script>
-<script src="logik.js?v=14"></script>
-<script src="graph.js?v=14"></script>
-<script src="karte.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="config.js?v=15"></script>
+<script src="logik.js?v=15"></script>
+<script src="graph.js?v=15"></script>
+<script src="karte.js?v=15"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

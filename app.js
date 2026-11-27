@@ -53,16 +53,16 @@
     if (diagramme.has(el.id)) { diagramme.get(el.id).destroy(); diagramme.delete(el.id); }
     if (!window.Chart) { el.innerHTML = '<p class="leise">Diagramm nicht geladen.</p>'; return; }
     el.innerHTML = '<div class="diagramm"><canvas></canvas></div>';
-    const farben = [css('--accent'), css('--text')];
+    const farben = opts.farbe ? [opts.farbe] : [css('--accent'), css('--text')];
     diagramme.set(el.id, new Chart(el.querySelector('canvas'), {
       type: 'bar',
-      data: { labels, datasets: reihen.map((r, k) => ({ data: r.daten, backgroundColor: farben[k] || css('--muted'), hoverBackgroundColor: k ? '#fff' : css('--accent-hell'), barPercentage: reihen.length > 1 ? 0.9 : 0.72, categoryPercentage: 0.8 })) },
+      data: { labels, datasets: reihen.map((r, k) => ({ data: r.daten, backgroundColor: farben[k] || css('--muted'), hoverBackgroundColor: opts.farbe ? css('--text') : k ? '#fff' : css('--accent-hell'), barPercentage: reihen.length > 1 ? 0.9 : 0.72, categoryPercentage: 0.8 })) },
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: { grid: { display: false }, border: { color: css('--line') }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: opts.labels || 15 } },
-          y: { beginAtZero: true, border: { display: false }, grid: { color: css('--line') }, ticks: { precision: 0, maxTicksLimit: 4 } },
+          y: { display: !opts.schlicht, beginAtZero: true, border: { display: false }, grid: { color: css('--line') }, ticks: { precision: 0, maxTicksLimit: 4 } },
         },
         plugins: { tooltip: { filter: (c) => c.datasetIndex === 0, callbacks: { title: () => '', label: (c) => tips(c.dataIndex) } } },
       },
@@ -185,34 +185,52 @@
   }
 
   // ------------------------------------------------------------------ Übersicht
+  // Zwei klar getrennte Teile: oben/links der Smoke-Counter als große Aussage mit Verlauf und einer Hauptaktion,
+  // unten/rechts die Sorten mit einer Kennzahl, kleiner THC-Grafik und den neuesten Einträgen.
+  const WT_BUCHST = ['S', 'M', 'D', 'M', 'D', 'F', 'S'];
   function zeichneStart() {
-    const s = L.statistik(Z.hases), heute = L.heute();
-    $('#start-datum').textContent = langesDatum(heute).toUpperCase();
-    const top = Z.hases.slice().sort((a, b) => b.thc - a.thc)[0];
-    $('#start-kennzahlen').innerHTML =
-      kz('EINTRÄGE', s.anzahl, s.bestrahlt + ' davon bestrahlt') +
-      kz('Ø THC', s.leer ? '–' : zahl(s.schnitt) + ' %', s.leer ? '' : 'Median ' + zahl(s.median) + ' %') +
-      kz('HÖCHSTER THC', top ? zahl(top.thc) + ' %' : '–', top ? top.name : '') +
-      kz('MIT REVIEW', s.mitReview, s.leer ? '' : Math.round(100 * s.mitReview / s.anzahl) + ' % bewertet');
-    // Smoke-Karte
-    const r = L.rauch(Z.tage[ich()] || {}, heute);
-    const status = r.heute === undefined ? 'Heute: noch nicht eingetragen' : r.heute === 0 ? 'Heute: rauchfrei ✓' : `Heute: ${r.heute}× geraucht`;
-    const andere = personen().filter((p) => p !== ich()).map((p) => {
-      const x = L.rauch(Z.tage[p] || {}, heute);
-      return `<span>${esc(name(p))}: <b>${x.serie} ${x.serie === 1 ? 'Tag' : 'Tage'}</b> rauchfrei</span>`;
+    const heute = L.heute(), r = L.rauch(Z.tage[ich()] || {}, heute);
+    const status = r.heute === undefined ? 'Heute noch offen' : r.heute === 0 ? 'Heute rauchfrei' : `Heute ${r.heute}× geraucht`;
+    // Platz im Vergleich (nach Serie)
+    const ps = personen(), serien = ps.map((p) => L.rauch(Z.tage[p] || {}, heute).serie);
+    const platz = 1 + serien.filter((x) => x > r.serie).length;
+    // Verlauf der letzten 14 Tage: rauchfrei = weißer Block, geraucht = rote Säule (Höhe = Anzahl), offen = Linie
+    const t14 = r.letzteTage(14), max = Math.max(1, ...t14.map((t) => t.anzahl || 0));
+    const verlauf = t14.map((t, i) => {
+      const art = t.anzahl === null ? 'offen' : t.anzahl === 0 ? 'frei' : 'geraucht';
+      const h = art === 'geraucht' ? Math.max(18, Math.round(100 * t.anzahl / max)) : art === 'frei' ? 100 : 0;
+      const text = `${t.datum.getDate()}.${t.datum.getMonth() + 1}.: ${art === 'offen' ? 'nicht eingetragen' : art === 'frei' ? 'rauchfrei' : t.anzahl + '× geraucht'}`;
+      return `<div class="v-tag ${art}${i === 13 ? ' heute' : ''}" title="${text}" aria-label="${text}"><div class="v-saeule"><i style="height:${h}%"></i></div><span>${WT_BUCHST[t.datum.getDay()]}</span></div>`;
     }).join('');
-    $('#start-smoke').innerHTML = `<div class="box-kopf"><span>DEIN SMOKE-COUNTER</span><button class="verlinkt" data-geh="smoke">KALENDER →</button></div>
-      <div class="serie"><span class="serie-zahl">${r.serie}</span><span class="serie-text">${r.serie === 1 ? 'TAG' : 'TAGE'} RAUCHFREI · REKORD ${r.rekord}</span></div>
-      <div class="status">${status}</div>
-      <div class="leiste"><button class="knopf voll" data-smoke="frei">HEUTE RAUCHFREI</button><button class="knopf" data-smoke="plus" aria-label="Einmal geraucht">+1</button><button class="knopf" data-smoke="minus" ${r.heute > 0 ? '' : 'disabled'}>−1</button></div>
-      <div class="streifen">${r.letzteTage(14).map((t) => `<span class="${t.anzahl === null ? '' : t.anzahl === 0 ? 'frei' : 'geraucht'}" title="${t.datum.getDate()}.${t.datum.getMonth() + 1}.">${t.anzahl > 0 ? t.anzahl : ''}</span>`).join('')}</div>
-      ${andere ? `<div class="vgl-kurz">${andere}</div>` : ''}`;
-    // Zuletzt
-    const neu = Z.hases.slice().sort((a, b) => b.id - a.id).slice(0, 4);
-    $('#start-zuletzt').innerHTML = neu.length ? neu.map((h) => `<div class="zeile-link" data-hase="${h.id}"><div><div class="z-name">${esc(h.name)}</div><div class="z-info">${zahl(h.thc, 2)} % THC</div></div><div>${reviewKuerzel(h)}</div></div>`).join('') : '<p class="leise">Noch keine Einträge.</p>';
+    $('#start-smoke').innerHTML = `<div class="label">${esc(langesDatum(heute))}</div>
+      <h1 class="held"><span class="rot">${r.serie}</span> ${r.serie === 1 ? 'Tag' : 'Tage'}<br>rauchfrei.</h1>
+      <p class="held-unter">${status} · Rekord ${r.rekord} ${r.rekord === 1 ? 'Tag' : 'Tage'}</p>
+      <div class="verlauf" role="img" aria-label="Die letzten 14 Tage">${verlauf}</div>
+      <div class="start-aktion">
+        <button class="knopf voll" data-smoke="frei" ${r.heute === 0 ? 'disabled' : ''}>HEUTE RAUCHFREI</button>
+        <button class="knopf" data-smoke="plus" aria-label="Einmal geraucht">+1</button>
+        <button class="knopf" data-smoke="minus" aria-label="Eins weniger" ${r.heute > 0 ? '' : 'disabled'}>−1</button>
+      </div>
+      <div class="start-links">
+        <button class="textlink" data-geh="smoke">Kalender</button>
+        ${ps.length > 1 ? `<button class="textlink" data-geh="smoke" data-ziel="vergleich">Platz ${platz} von ${ps.length}</button>` : ''}
+      </div>`;
+
+    // Sorten
+    const s = L.statistik(Z.hases), neu = Z.hases.slice().sort((a, b) => b.id - a.id).slice(0, 3);
+    $('#start-sorten').innerHTML = `<div class="label rot-label">SORTEN</div>
+      <div class="sorten-zahl"><span>${s.anzahl}</span>${s.anzahl === 1 ? 'Sorte' : 'Sorten'}</div>
+      <p class="held-unter">${s.leer ? 'Noch keine Einträge.' : `Ø ${zahl(s.schnitt)} % THC · ${s.mitReview} mit Review`}</p>
+      <div id="start-thc" class="start-grafik"></div>
+      <button class="textlink" data-geh="statistik">Statistik</button>
+      ${neu.length ? `<div class="label start-neu">NEU DABEI</div>
+        <div class="liste-zeilen">${neu.map((h) => `<button class="zeile" data-hase="${h.id}"><span><b>${esc(h.name)}</b><small>${zahl(h.thc, 2)} % THC</small></span><span class="pfeil">→</span></button>`).join('')}</div>` : ''}`;
+    const v = L.thcVerteilung(Z.hases, 2);
+    if (v.length) saeulen($('#start-thc'), v.map((x) => x.name), [{ daten: v.map((x) => x.wert) }], (i) => `${v[i].name} % THC: ${v[i].wert} ${v[i].wert === 1 ? 'Sorte' : 'Sorten'}`, { labels: 6, schlicht: true, farbe: css('--line-strong') });
+    else $('#start-thc').hidden = true;
   }
   document.addEventListener('click', (e) => {
-    const g = e.target.closest('[data-geh]'); if (g) { zeigeAnsicht(g.dataset.geh); return; }
+    const g = e.target.closest('[data-geh]'); if (g) { zeigeAnsicht(g.dataset.geh); if (g.dataset.ziel) { const z = document.getElementById(g.dataset.ziel); if (z) z.scrollIntoView(); } return; }
     const h = e.target.closest('[data-hase]'); if (h) { details(Z.hases.find((x) => x.id === +h.dataset.hase)); return; }
     const sm = e.target.closest('[data-smoke]');
     if (sm) {
